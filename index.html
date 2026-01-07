@@ -266,18 +266,31 @@
 
     <div id="tab-daily" style="display:none;">
       <div class="custom-card mb-4" style="background: #fff; padding: 20px;">
-        <label class="filter-label mb-2 d-block">📅 편성 일자 선택</label>
-        <div class="d-flex gap-2">
-          <select id="dailyDateSelect" class="form-select" style="max-width: 250px;" onchange="renderDailySchedule()">
-            <option value="">날짜를 선택하세요</option>
-          </select>
-          <button class="btn btn-primary px-4 rounded-3 fw-bold btn-sm" onclick="renderDailySchedule()">조회</button>
+        <div class="d-flex flex-wrap align-items-end gap-3">
+            <div>
+                <label class="filter-label mb-2 d-block">📅 편성 일자</label>
+                <select id="dailyDateSelect" class="form-select" style="min-width: 200px;">
+                    <option value="">날짜를 선택하세요</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="filter-label mb-2 d-block">📂 MD 분류</label>
+                <select id="dailyMdSelect" class="form-select" style="min-width: 150px;">
+                    <option value="ALL">전체</option>
+                </select>
+            </div>
+
+            <div>
+                <button class="btn btn-primary px-4 rounded-3 fw-bold btn-sm" style="height: 38px;" onclick="renderDailySchedule()">조회</button>
+            </div>
         </div>
       </div>
+      
       <div id="dailyScheduleArea">
         <div class="text-center p-5 text-muted bg-white rounded-4 shadow-sm">
            <i class="bi bi-calendar-event fs-1 d-block mb-3 opacity-50"></i>
-           상단에서 날짜를 선택하면<br>해당 일자의 상세 편성표가 표시됩니다.
+           상단에서 날짜와 분류를 선택하면<br>해당 일자의 상세 편성표가 표시됩니다.
         </div>
       </div>
     </div> 
@@ -387,7 +400,7 @@
                     
                     loadInitialFilter(); 
                     updatePeriodOptions();
-                    initDailyTab();
+                    initDailyTab(); // [수정] MD 필터 초기화 포함됨
 
                     document.getElementById('loading').style.display = 'none';
                 } catch (e) {
@@ -668,8 +681,7 @@
         .sort((a, b) => b[1].weight - a[1].weight)
         .forEach(([brand, val], idx) => {
           const rank = idx + 1;
-          const html = `
-            <div class="brand-row ${rank <= 3 ? 'top-rank' : ''}" onclick="renderItems('${brand}')">
+          const html = `<div class="brand-row ${rank <= 3 ? 'top-rank' : ''}" onclick="renderItems('${brand}')">
               <div class="d-flex align-items-center gap-2">
                 <div class="rank-badge">${rank}</div>
                 <div><h5 class="brand-name mb-0 fw-bold">${brand}</h5></div>
@@ -827,16 +839,20 @@
     }
 
     // ============================================================
-    // [Tab 2 Logic] 일자별 편성표
+    // [Tab 2 Logic] 일자별 편성표 (수정됨)
     // ============================================================
     function initDailyTab() {
       const dateSet = new Set();
+      const mdSet = new Set(); // [추가] MD 분류 수집용
+
       rawData.forEach(r => {
         const d = r[COL.DATE];
         if (d && moment(d).isValid()) dateSet.add(moment(d).format('YYYY-MM-DD'));
+        if (r[COL.MD_CLS]) mdSet.add(r[COL.MD_CLS]); // [추가]
       });
-      const sortedDates = Array.from(dateSet).sort().reverse();
 
+      // 1. 날짜 드롭다운 초기화
+      const sortedDates = Array.from(dateSet).sort().reverse();
       const sel = document.getElementById('dailyDateSelect');
       sel.innerHTML = '<option value="">날짜를 선택하세요</option>';
       sortedDates.forEach(dateStr => {
@@ -845,24 +861,30 @@
         const opt = document.createElement('option'); 
         opt.value = dateStr; 
         opt.text = `${dateStr} (${day})`; 
-        
-        // 드롭다운 텍스트 색상 적용
-        if (d.day() === 0) opt.style.color = '#e74c3c'; // 일요일(빨강)
-        else if (d.day() === 6) opt.style.color = '#3498db'; // 토요일(파랑)
-        
+        if (d.day() === 0) opt.style.color = '#e74c3c'; 
+        else if (d.day() === 6) opt.style.color = '#3498db'; 
         sel.appendChild(opt);
+      });
+
+      // 2. [추가] MD 분류 드롭다운 초기화
+      const sortedMds = Array.from(mdSet).sort();
+      const mdSel = document.getElementById('dailyMdSelect');
+      mdSel.innerHTML = '<option value="ALL">전체</option>';
+      sortedMds.forEach(md => {
+          const opt = document.createElement('option');
+          opt.value = md;
+          opt.text = md;
+          mdSel.appendChild(opt);
       });
 
       const today = moment().format('YYYY-MM-DD');
       let closestDate = sortedDates[0]; 
-      
       for (let d of sortedDates) {
         if (d <= today) {
             closestDate = d;
             break;
         }
       }
-      
       if (closestDate) {
           sel.value = closestDate;
           renderDailySchedule();
@@ -871,6 +893,7 @@
 
     function renderDailySchedule() {
       const selectedDate = document.getElementById('dailyDateSelect').value;
+      const selectedMd = document.getElementById('dailyMdSelect').value; // [추가]
       const container = document.getElementById('dailyScheduleArea');
       
       if (!selectedDate) {
@@ -878,13 +901,16 @@
         return;
       }
 
+      // [수정] 날짜 + MD 분류 필터링 동시 적용
       const dayItems = rawData.filter(r => {
         const d = r[COL.DATE];
-        return d && moment(d).format('YYYY-MM-DD') === selectedDate;
+        const matchDate = (d && moment(d).format('YYYY-MM-DD') === selectedDate);
+        const matchMd = (selectedMd === 'ALL' || r[COL.MD_CLS] === selectedMd);
+        return matchDate && matchMd;
       });
 
       if (dayItems.length === 0) {
-        container.innerHTML = '<div class="text-center p-5 bg-white rounded-4 shadow-sm">해당 날짜에 편성 정보가 없습니다.</div>';
+        container.innerHTML = '<div class="text-center p-5 bg-white rounded-4 shadow-sm">해당 날짜/분류 조건에 맞는 편성 정보가 없습니다.</div>';
         return;
       }
 
@@ -902,7 +928,9 @@
         const price = getNum(item[COL.PRICE]).toLocaleString();
         const chBadge = getChannelBadge(item[COL.CHANNEL]);
         
-        // [수정된 부분] 버튼 분리: 상품상세(새창) / 방송이력(내부이동)
+        // [수정] MD 분류 표기 (채널과 브랜드 사이)
+        const mdText = item[COL.MD_CLS] ? `<span class="badge bg-light text-dark border ms-1" style="font-size:0.75rem">${item[COL.MD_CLS]}</span>` : '';
+
         html += `
           <div class="timeline-item fade-in">
             <div class="time-column">
@@ -918,7 +946,7 @@
                 <div class="d-flex justify-content-between align-items-start mb-2">
                    <div>
                        ${chBadge}
-                       <span class="badge bg-secondary bg-opacity-10 text-secondary category-badge ms-1">${item[COL.BRAND]}</span>
+                       ${mdText} <span class="badge bg-secondary bg-opacity-10 text-secondary category-badge ms-1">${item[COL.BRAND]}</span>
                    </div>
                    <span class="fw-bold text-primary small">${Math.round(item[COL.WEIGHT])}분</span>
                 </div>
