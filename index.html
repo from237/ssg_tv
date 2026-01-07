@@ -608,7 +608,6 @@
         });
     }
 
-    // [수정] Top 차트 함수: Total Weight를 인자로 받아 % 표시
     function updateTopChart(canvasId, stats, topN, instanceObj, instanceKey, total) {
         const ctx = document.getElementById(canvasId).getContext('2d');
         if (instanceObj[instanceKey]) instanceObj[instanceKey].destroy();
@@ -1095,6 +1094,7 @@
       }
       if (closestDate) {
           sel.value = closestDate;
+          renderDailySchedule(); // [추가] 초기화 시 바로 최신 날짜로 렌더링
       }
     }
 
