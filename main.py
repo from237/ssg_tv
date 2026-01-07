@@ -12,11 +12,11 @@ import pandas as pd
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ==========================================
-# [설정] 1. 파일명 및 수집 날짜 고정
+# [설정] 1. 파일명 및 수집 날짜 (1월 5, 6일 강제 수집)
 # ==========================================
-FILENAME = "data.csv"   # 깃허브 액션 파일명
-START_DATE = date(2026, 1, 5) # 시작일 강제 고정
-END_DATE = date(2026, 1, 6)   # 종료일 강제 고정 (원하는 만큼 늘려도 됨)
+FILENAME = "data.csv"
+START_DATE = date(2026, 1, 5) 
+END_DATE = date(2026, 1, 6)   
 
 WEIGHT_FOLDER = "weights"
 LOADED_WEIGHTS_MAP = {}
@@ -100,9 +100,9 @@ def calc_duration_minutes(time_str):
     except: return 0
 
 def run():
-    print(f"🚀 [수동 모드] 수집 시작: {START_DATE} ~ {END_DATE}")
+    print(f"🚀 [모바일 모드] 수집 시작: {START_DATE} ~ {END_DATE}")
 
-    # 파일이 있으면 'a'(이어쓰기), 없으면 'w'(새로쓰기)
+    # 파일 존재 여부 확인 (이어쓰기 모드)
     file_exists = os.path.exists(FILENAME)
     mode = 'a' if file_exists else 'w'
     
@@ -120,13 +120,14 @@ def run():
             writer.writerow(headers)
 
         session = requests.Session()
-        # [중요] 한국 브라우저처럼 위장하는 헤더 추가
+        
+        # [핵심] 안드로이드 모바일 기기로 위장 (차단 우회 시도)
         session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html, */*; q=0.01",
+            "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+            "Referer": "https://m.shinsegaetvshopping.com/broadcast/tvschedule",
+            "X-Requested-With": "XMLHttpRequest",
             "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Referer": "https://www.shinsegaetvshopping.com/broadcast/tvschedule",
-            "X-Requested-With": "XMLHttpRequest"
+            "Origin": "https://m.shinsegaetvshopping.com"
         })
 
         delta = (END_DATE - START_DATE).days
@@ -138,19 +139,23 @@ def run():
             print(f"[{i + 1}] 📅 {s_date}...", end="")
 
             try:
+                # 쿠키 충돌 방지를 위해 매번 초기화
+                session.cookies.clear()
+                
                 url = "https://www.shinsegaetvshopping.com/broadcast/tvschedule-ajax"
-                # 타임스탬프 등 파라미터 동일
                 params = {
                     "fromDate": p_date,
                     "tomorrowYn": "N",
                     "_": int(time.time() * 1000)
                 }
                 
-                resp = session.get(url, params=params, timeout=15, verify=False)
+                resp = session.get(url, params=params, timeout=20, verify=False)
                 
-                # 응답 체크
+                # 에러 코드 확인
                 if resp.status_code != 200:
-                    print(f" ❌ 서버 응답 오류 ({resp.status_code})")
+                    print(f" ❌ 차단됨 ({resp.status_code})")
+                    # 417/403 등 에러나면 바로 다음 날짜 시도하기보다는 잠시 대기
+                    time.sleep(3)
                     continue
 
                 soup = BeautifulSoup(resp.text, "html.parser")
@@ -207,11 +212,13 @@ def run():
                         writer.writerows(day_data)
                         print(f" ✅ {len(day_data)}건 저장")
                     else:
-                        print(f" ⚠️ 데이터 없음 (파싱 실패)")
+                        print(f" ⚠️ 데이터 없음 (페이지 로딩은 됐으나 내용 없음)")
                 else:
-                    print(f" ⚠️ 방송 정보 없음 (차단 가능성 높음)")
+                    print(f" ⚠️ 방송 목록 못 찾음 (구조 변경 혹은 차단)")
                 
-                time.sleep(2) # 봇 탐지 회피를 위해 딜레이 약간 증가
+                # 랜덤 대기 (로봇 탐지 회피)
+                time.sleep(random.uniform(2, 5)) 
+
             except Exception as e:
                 print(f" ❌ 에러: {e}")
 
