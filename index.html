@@ -237,10 +237,11 @@
   <div class="container">
     
     <div id="tab-trend" class="fade-in">
+        
         <div class="row mb-4">
              <div class="col-12">
                 <div class="custom-card h-100">
-                      <h5 class="chart-card-title">MD 분류별 편성 비중 (가중분)</h5>
+                      <h5 class="chart-card-title" id="titleMdShare">MD 분류별 편성 비중 (가중분)</h5>
                       <div class="chart-container" style="height: 350px;">
                         <canvas id="chartMdShare"></canvas>
                       </div>
@@ -251,7 +252,7 @@
         <div class="row g-4">
             <div class="col-lg-6">
                 <div class="custom-card h-100">
-                    <h5 class="chart-card-title">Top 10 브랜드 (가중분 순)</h5>
+                    <h5 class="chart-card-title" id="titleTopBrand">Top 10 브랜드 (가중분 순)</h5>
                     <div class="chart-container" style="height: 400px;">
                         <canvas id="chartTopBrands"></canvas>
                     </div>
@@ -259,7 +260,7 @@
             </div>
             <div class="col-lg-6">
                 <div class="custom-card h-100">
-                    <h5 class="chart-card-title">Top 10 상품 (가중분 순)</h5>
+                    <h5 class="chart-card-title" id="titleTopItem">Top 10 상품 (가중분 순)</h5>
                     <div class="chart-container" style="height: 400px;">
                         <canvas id="chartTopItems"></canvas>
                     </div>
@@ -398,10 +399,10 @@
   </div>
 
   <script>
-    // [중요] 깃허브 Raw 데이터 주소 (자신의 저장소 주소로 변경 필요!)
+    // [중요] 깃허브 Raw 데이터 주소
     const GITHUB_CSV_URL = "https://raw.githubusercontent.com/from237/ssg_tv/main/data.csv"; 
 
-    // MD 분류 고정 색상 맵 (원하는 색상으로 수정 가능)
+    // MD 분류 고정 색상 맵
     const MD_COLOR_MAP = {
         '패션의류': '#E74C3C',    // Red
         '패션잡화': '#E67E22',    // Orange
@@ -519,7 +520,12 @@
         let totalWeight = 0;
         data.forEach(r => totalWeight += getNum(r[COL.WEIGHT]));
 
-        // KPI 카드 업데이트 제거됨 (DOM이 삭제되었으므로 JS 로직도 제거)
+        // [제목 업데이트 로직]
+        const periodText = document.getElementById('multiSelectAnchor').innerText || '전체';
+        
+        document.getElementById('titleMdShare').innerText = `${periodText} MD 분류별 편성 비중 (가중분)`;
+        document.getElementById('titleTopBrand').innerText = `${periodText} Top 10 브랜드 (가중분 순)`;
+        document.getElementById('titleTopItem').innerText = `${periodText} Top 10 상품 (가중분 순)`;
 
         if(data.length === 0) return;
 
@@ -538,26 +544,22 @@
             itemStats[item] = (itemStats[item] || 0) + w;
         });
 
-        // 3. 차트 렌더링
+        // 차트 그리기 (totalWeight 전달)
         updateMdChart(mdStats, totalWeight);
-        updateTopChart('chartTopBrands', brandStats, '브랜드', 10, chartInstances, 'topBrands');
-        updateTopChart('chartTopItems', itemStats, '상품', 10, chartInstances, 'topItems');
+        updateTopChart('chartTopBrands', brandStats, 10, chartInstances, 'topBrands', totalWeight);
+        updateTopChart('chartTopItems', itemStats, 10, chartInstances, 'topItems', totalWeight);
     }
 
-    // [수정] MD 차트 (막대형 + 고정 색상)
     function updateMdChart(stats, total) {
         const ctx = document.getElementById('chartMdShare').getContext('2d');
         if (chartInstances.mdShare) chartInstances.mdShare.destroy();
 
-        // 가중분 내림차순 정렬
         const labels = Object.keys(stats).sort((a,b) => stats[b] - stats[a]);
         const values = labels.map(k => stats[k]);
-        
-        // 고정 색상 매핑 적용
         const bgColors = labels.map(label => MD_COLOR_MAP[label] || DEFAULT_COLOR);
 
         chartInstances.mdShare = new Chart(ctx, {
-            type: 'bar', // 도넛 -> 막대(Bar)로 변경
+            type: 'bar', 
             data: {
                 labels: labels,
                 datasets: [{
@@ -569,15 +571,17 @@
                 }]
             },
             options: {
-                indexAxis: 'y', // 가로 막대
+                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: {
+                    padding: { right: 50 } // 레이블 공간 확보
+                },
                 plugins: {
-                    legend: { display: false }, // 색상이 고정이라 범례보다는 라벨을 직접 보는게 편함
+                    legend: { display: false },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                let label = context.label || '';
                                 let value = context.parsed.x;
                                 let percentage = ((value / total) * 100).toFixed(1) + '%';
                                 return ` ${Math.round(value).toLocaleString()}분 (${percentage})`;
@@ -600,11 +604,12 @@
                     y: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 11 } } }
                 }
             },
-            plugins: [ChartDataLabels] // 데이터 라벨 플러그인 활성화
+            plugins: [ChartDataLabels]
         });
     }
 
-    function updateTopChart(canvasId, stats, labelName, topN, instanceObj, instanceKey) {
+    // [수정] Top 차트 함수: Total Weight를 인자로 받아 % 표시
+    function updateTopChart(canvasId, stats, topN, instanceObj, instanceKey, total) {
         const ctx = document.getElementById(canvasId).getContext('2d');
         if (instanceObj[instanceKey]) instanceObj[instanceKey].destroy();
 
@@ -631,6 +636,9 @@
                 indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: {
+                    padding: { right: 80 } // 레이블이 잘리지 않도록 오른쪽 여백 추가
+                },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
@@ -640,13 +648,26 @@
                             }
                         }
                     },
-                    datalabels: { display: false } // Top 차트는 깔끔하게 라벨 숨김
+                    datalabels: { 
+                        display: true, // 레이블 표시 활성화
+                        anchor: 'end', // 막대 끝 기준
+                        align: 'end',  // 막대 바깥쪽
+                        offset: 4,     // 간격
+                        color: '#333',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: function(value, context) {
+                            // "500분 (N%)" 형식, N은 INT
+                            const percent = Math.round((value / total) * 100);
+                            return `${value.toLocaleString()}분 (${percent}%)`;
+                        }
+                    } 
                 },
                 scales: {
                     x: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { font: { size: 10 } } },
                     y: { grid: { display: false }, ticks: { font: { weight: 'bold' } } }
                 }
-            }
+            },
+            plugins: [ChartDataLabels]
         });
     }
 
@@ -1161,6 +1182,9 @@
       container.innerHTML = html;
     }
 
+    // ============================================================
+    // [Tab Search Logic] 검색 및 다운로드 (유지)
+    // ============================================================
     function handleKeywordSearch() {
         const keyword = document.getElementById('searchInput').value.trim();
         const container = document.getElementById('searchResultArea');
