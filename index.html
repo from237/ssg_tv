@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>2025년 S사 방송상품 운영요약</title>
+  <title> S사 방송상품 운영요약</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -148,7 +148,7 @@
     <div class="container">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h3 class="header-title mb-1"><i class="bi bi-bar-chart-line-fill text-info me-2"></i>2025년 S사 방송상품 운영현황</h3>
+            <h3 class="header-title mb-1"><i class="bi bi-bar-chart-line-fill text-info me-2"></i> S사 방송상품 운영현황</h3>
         </div>
       </div>
     </div>
@@ -856,6 +856,7 @@
         const price = getNum(item[COL.PRICE]).toLocaleString();
         const chBadge = getChannelBadge(item[COL.CHANNEL]);
         
+        // [수정된 부분] 버튼 분리: 상품상세(새창) / 방송이력(내부이동)
         html += `
           <div class="timeline-item fade-in">
             <div class="time-column">
@@ -881,14 +882,19 @@
                    <span class="border-start ps-2 text-dark fw-bold">${price}원</span>
                 </div>
                 
-                <div class="d-flex justify-content-between align-items-center mt-auto">
-                    <div class="p-2 bg-light rounded text-secondary small flex-grow-1 me-3 text-truncate">
+                <div class="d-flex justify-content-between align-items-center mt-auto gap-2">
+                    <div class="p-2 bg-light rounded text-secondary small flex-grow-1 text-truncate">
                       ${item[COL.PROMOTION] ? '<i class="bi bi-gift-fill me-1 text-danger"></i> ' + item[COL.PROMOTION] : '<span class="text-muted opacity-50">프로모션 없음</span>'}
                     </div>
                     
+                    <a href="${item[COL.LINK]}" target="_blank" class="btn btn-dark btn-sm rounded-pill px-3 py-1 fw-bold btn-custom" style="white-space:nowrap;">
+                        상품상세
+                    </a>
+                    
                     <button class="btn btn-primary btn-sm rounded-pill px-3 py-1 fw-bold btn-custom" 
+                            style="white-space:nowrap;"
                             onclick="historySource='daily'; renderHistory('${item[COL.ITEM_ID]}')">
-                        상세보기 <i class="bi bi-arrow-right ms-1"></i>
+                        방송이력
                     </button>
                 </div>
               </div>
