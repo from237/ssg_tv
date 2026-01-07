@@ -137,6 +137,13 @@
 
     .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
     
+    /* 애니메이션 추가 (fade-in) */
+    .fade-in { animation: fadeIn 0.4s ease-in-out; }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
     @media (max-width: 768px) {
        .timeline-item { flex-direction: column; gap: 0; }
        .time-column { flex-direction: row; align-items: center; width: 100%; flex: auto; margin-bottom: 15px; gap: 15px; }
@@ -258,10 +265,10 @@
             </div>
             <div class="col-lg-6">
                 <div class="custom-card h-100">
-                     <h5 class="chart-card-title">MD 분류별 편성 비중 (가중분)</h5>
-                     <div class="chart-container" style="height: 140px;">
+                      <h5 class="chart-card-title">MD 분류별 편성 비중 (가중분)</h5>
+                      <div class="chart-container" style="height: 140px;">
                         <canvas id="chartMdShare"></canvas>
-                     </div>
+                      </div>
                 </div>
             </div>
         </div>
@@ -642,7 +649,7 @@
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                         callbacks: {
+                          callbacks: {
                             label: function(context) {
                                 return ` ${context.parsed.x.toLocaleString()}분`;
                             }
@@ -1137,16 +1144,16 @@
               </div>
               <div class="sc-info-box">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                   <div>
-                       ${chBadge}
-                       ${mdText} <span class="badge bg-secondary bg-opacity-10 text-secondary category-badge ms-1">${item[COL.BRAND]}</span>
-                   </div>
-                   <span class="fw-bold text-primary small">${Math.round(item[COL.WEIGHT])}분</span>
+                    <div>
+                        ${chBadge}
+                        ${mdText} <span class="badge bg-secondary bg-opacity-10 text-secondary category-badge ms-1">${item[COL.BRAND]}</span>
+                    </div>
+                    <span class="fw-bold text-primary small">${Math.round(item[COL.WEIGHT])}분</span>
                 </div>
                 <h5 class="fw-bold mb-2 text-dark text-truncate fs-6" style="max-width: 100%;" title="${item[COL.NAME]}">${item[COL.NAME]}</h5>
                 <div class="d-flex align-items-center gap-2 text-muted small mb-3">
-                   <span>${item[COL.ITEM_CLS2] || item[COL.ITEM_CLS1]}</span>
-                   <span class="border-start ps-2 text-dark fw-bold">${price}원</span>
+                    <span>${item[COL.ITEM_CLS2] || item[COL.ITEM_CLS1]}</span>
+                    <span class="border-start ps-2 text-dark fw-bold">${price}원</span>
                 </div>
                 
                 <div class="d-flex justify-content-between align-items-center mt-auto gap-2">
