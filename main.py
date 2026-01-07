@@ -101,84 +101,89 @@ def calc_duration_minutes(time_str):
     except: return 0
 
 # ==========================================
-# [메인] 실행 로직 (일일 1일치 업데이트)
+# [메인] 실행 로직 (안전하게 3일치 수집)
 # ==========================================
 def run():
-    # 1. 한국 시간(KST) 기준 어제 날짜 계산
-    # GitHub Action 서버는 UTC이므로 +9시간을 해줘야 한국 시간이 됨
+    # 1. 한국 시간(KST) 기준 날짜 계산
     kst_now = datetime.utcnow() + timedelta(hours=9)
-    target_date = (kst_now - timedelta(days=1)).date()
+    today = kst_now.date()
     
-    # 크롤링용 날짜 포맷
-    p_date = target_date.strftime("%Y/%m/%d")
-    s_date = target_date.strftime("%Y-%m-%d")
+    # [수정] 누락 방지를 위해 [그저께 ~ 오늘] 3일치를 수집 범위로 설정
+    start_date = today - timedelta(days=2) 
+    end_date = today
     
-    print(f"🚀 [KST 기준] 어제 날짜 1일치 수집 시작: {s_date}")
+    print(f"🚀 [KST] 수집 범위: {start_date} ~ {end_date} (자동 복구 모드)")
 
     session = requests.Session()
     session.headers.update({"User-Agent": "Mozilla/5.0", "X-Requested-With": "XMLHttpRequest"})
     
     new_rows = []
     
-    try:
-        print(f"   📅 {s_date} 데이터 크롤링 중...", end="")
-        url = "https://www.shinsegaetvshopping.com/broadcast/tvschedule-ajax"
-        resp = session.get(url, params={"fromDate": p_date, "tomorrowYn": "N", "_": int(time.time()*1000)}, timeout=10, verify=False)
-        soup = BeautifulSoup(resp.text, "html.parser")
-        dl_list = soup.select("dl")
+    # 3일간 루프 돌며 수집
+    delta = end_date - start_date
+    for i in range(delta.days + 1):
+        target_date = start_date + timedelta(days=i)
+        p_date = target_date.strftime("%Y/%m/%d")
+        s_date = target_date.strftime("%Y-%m-%d")
         
-        cnt = 0
-        if dl_list:
-            times = [dl.select_one("dt > span._time").get_text(strip=True) for dl in dl_list if dl.select_one("dt > span._time")]
-            t_cnt = Counter(times)
-            t_seen = {}
+        print(f"   📅 {s_date} 데이터 확인 중...", end="")
+        try:
+            url = "https://www.shinsegaetvshopping.com/broadcast/tvschedule-ajax"
+            resp = session.get(url, params={"fromDate": p_date, "tomorrowYn": "N", "_": int(time.time()*1000)}, timeout=10, verify=False)
+            soup = BeautifulSoup(resp.text, "html.parser")
+            dl_list = soup.select("dl")
             
-            for dl in dl_list:
-                tt = dl.select_one("dt > span._time")
-                bt = tt.get_text(strip=True) if tt else ""
-                freq = t_cnt[bt]
-                ch = "전체"
-                if freq > 1:
-                    seen = t_seen.get(bt, 0)
-                    ch = "IPTV" if seen == 0 else "CATV"
-                    t_seen[bt] = seen + 1
+            cnt = 0
+            if dl_list:
+                times = [dl.select_one("dt > span._time").get_text(strip=True) for dl in dl_list if dl.select_one("dt > span._time")]
+                t_cnt = Counter(times)
+                t_seen = {}
                 
-                sm = calc_duration_minutes(bt)
-                wm = calc_final_weighted_mins(target_date, bt, sm, ch)
-                
-                cards = dl.select("dd > div.card[data-main='Y']")
-                for card in cards:
-                    try:
-                        full_cat = card.get("data-gtm-item-category", "")
-                        cats = full_cat.split(">") + [""]*5
-                        c1, c2, c3, c4, c5 = cats[:5]
-                        brand = card.get("data-gtm-item-brand", "").split('(')[0].strip()
-                        name = card.get("data-gtm-item-name", "").strip()
-                        pd_val = card.get("data-gtm-item-discount", "0")
-                        price = int(str(pd_val).replace(",", "")) if pd_val else 0
-                        gid = card.get("data-gtm-item-id", "")
-                        link = f"https://www.shinsegaetvshopping.com/display/detail/{gid}" if gid else ""
-                        img = card.select_one("img")
-                        i_url = img.get("src", "").replace("_wg_", "_s_") if img else ""
-                        if i_url.startswith("//"): i_url = "https:" + i_url
-                        promo = card.select_one("._promoCharge")
-                        p_txt = promo.get_text(strip=True) if promo else ""
-                        md_class = determine_md_class(brand, c1, c2)
+                for dl in dl_list:
+                    tt = dl.select_one("dt > span._time")
+                    bt = tt.get_text(strip=True) if tt else ""
+                    freq = t_cnt[bt]
+                    ch = "전체"
+                    if freq > 1:
+                        seen = t_seen.get(bt, 0)
+                        ch = "IPTV" if seen == 0 else "CATV"
+                        t_seen[bt] = seen + 1
+                    
+                    sm = calc_duration_minutes(bt)
+                    wm = calc_final_weighted_mins(target_date, bt, sm, ch)
+                    
+                    cards = dl.select("dd > div.card[data-main='Y']")
+                    for card in cards:
+                        try:
+                            full_cat = card.get("data-gtm-item-category", "")
+                            cats = full_cat.split(">") + [""]*5
+                            c1, c2, c3, c4, c5 = cats[:5]
+                            brand = card.get("data-gtm-item-brand", "").split('(')[0].strip()
+                            name = card.get("data-gtm-item-name", "").strip()
+                            pd_val = card.get("data-gtm-item-discount", "0")
+                            price = int(str(pd_val).replace(",", "")) if pd_val else 0
+                            gid = card.get("data-gtm-item-id", "")
+                            link = f"https://www.shinsegaetvshopping.com/display/detail/{gid}" if gid else ""
+                            img = card.select_one("img")
+                            i_url = img.get("src", "").replace("_wg_", "_s_") if img else ""
+                            if i_url.startswith("//"): i_url = "https:" + i_url
+                            promo = card.select_one("._promoCharge")
+                            p_txt = promo.get_text(strip=True) if promo else ""
+                            md_class = determine_md_class(brand, c1, c2)
 
-                        new_rows.append({
-                            "방송일자": s_date, "방송시간": bt, "채널구분": ch, "단순분": sm, "가중분": wm,
-                            "아이템분류1": c1, "아이템분류2": c2, "아이템분류3": c3, "아이템분류4": c4, "아이템분류5": c5,
-                            "브랜드": brand, "상품명": name, "판매가": price, "할인가": price, "프로모션": p_txt,
-                            "상품ID": gid, "이미지URL": i_url, "상세링크": link, "MD분류": md_class
-                        })
-                        cnt += 1
-                    except: continue
-        print(f" ✅ {cnt}건 수집")
-        
-    except Exception as e:
-        print(f" ❌ 에러: {e}")
+                            new_rows.append({
+                                "방송일자": s_date, "방송시간": bt, "채널구분": ch, "단순분": sm, "가중분": wm,
+                                "아이템분류1": c1, "아이템분류2": c2, "아이템분류3": c3, "아이템분류4": c4, "아이템분류5": c5,
+                                "브랜드": brand, "상품명": name, "판매가": price, "할인가": price, "프로모션": p_txt,
+                                "상품ID": gid, "이미지URL": i_url, "상세링크": link, "MD분류": md_class
+                            })
+                            cnt += 1
+                        except: continue
+            print(f" ✅ {cnt}건 수집")
+        except Exception as e:
+            print(f" ❌ 에러: {e}")
 
-    # 3. 데이터 병합 (Overwrite Logic for target_date)
+    # 3. 데이터 병합 (수집된 3일치 구간을 덮어쓰기)
     headers = [
         "방송일자", "방송시간", "채널구분", "단순분", "가중분",
         "아이템분류1", "아이템분류2", "아이템분류3", "아이템분류4", "아이템분류5",
@@ -186,34 +191,29 @@ def run():
         "상품ID", "이미지URL", "상세링크", "MD분류"
     ]
     
-    # 신규 데이터프레임
     new_df = pd.DataFrame(new_rows, columns=headers)
     
     if os.path.exists(FILENAME):
         try:
-            # 기존 파일 읽기
             existing_df = pd.read_csv(FILENAME, encoding='utf-8-sig')
             
-            # [중복 방지] 기존 데이터에서 '수집 대상 날짜'가 이미 있다면 삭제
-            # (만약 스크립트가 2번 실행되더라도 중복되지 않게 함)
-            existing_df = existing_df[existing_df['방송일자'] != s_date]
+            # [수정] 수집한 기간(3일)에 해당하는 기존 데이터 삭제 (Overwrite)
+            update_dates = [ (start_date + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(delta.days + 1) ]
+            existing_df = existing_df[~existing_df['방송일자'].isin(update_dates)]
             
-            # 합치기 (기존 + 신규)
+            # 합치기
             final_df = pd.concat([existing_df, new_df], ignore_index=True)
-            
-            # 날짜순 정렬
             final_df = final_df.sort_values(by=['방송일자', '방송시간'])
             
-            print(f"💾 기존 {len(existing_df)}건 + 신규 {len(new_df)}건 병합 완료")
+            print(f"💾 병합 완료 (총 {len(final_df)}건)")
         except Exception as e:
-            print(f"⚠️ 병합 중 오류 발생 (신규 파일로 생성): {e}")
+            print(f"⚠️ 병합 오류, 새로 생성: {e}")
             final_df = new_df
     else:
         final_df = new_df
 
-    # 저장
     final_df.to_csv(FILENAME, index=False, encoding='utf-8-sig')
-    print(f"🎉 최종 저장 완료: {FILENAME} (총 {len(final_df)}건)")
+    print(f"🎉 저장 완료: {FILENAME}")
 
 if __name__ == "__main__":
     run()
