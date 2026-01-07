@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>2025년 S사 방송상품 운영요약</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
+  <style>
+    /* 기존 스타일 그대로 유지 */
+    :root {
+      --primary-color: #34495e;
+      --accent-color: #3498db; 
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --text-main: #2c3e50;
+      --soft-shadow: 0 5px 15px rgba(0,0,0,0.05);
+      --hover-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      --radius-md: 12px;
+      --radius-sm: 8px;
+    }
+    
+    body { font-family: 'Pretendard', sans-serif; background-color: var(--bg-color); color: var(--text-main); padding-bottom: 50px; letter-spacing: -0.02em; }
+    
+    .dashboard-header { 
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      padding: 40px 0; 
+      margin-bottom: 30px; 
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(30, 60, 114, 0.2);
+    }
+    .header-title { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .header-subtitle { color: rgba(255, 255, 255, 0.8); font-size: 0.9rem; font-weight: 400; background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; }
+
+    .nav-pills { background: #e9ecef; padding: 5px; border-radius: 50px; display: inline-flex; width: 100%; margin-bottom: 20px; }
+    .nav-item { flex: 1; text-align: center; }
+    .nav-link { border-radius: 50px; color: #7f8c8d; font-weight: 600; padding: 10px 15px; transition: all 0.3s ease; font-size: 0.95rem; }
+    .nav-link.active { background-color: var(--card-bg); color: var(--accent-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); font-weight: 800; }
+
+    .custom-card { background: var(--card-bg); border-radius: var(--radius-md); border: none; box-shadow: var(--soft-shadow); padding: 20px; margin-bottom: 20px; transition: transform 0.2s, box-shadow 0.2s; }
+    
+    .filter-pastel {
+        background: linear-gradient(145deg, #f0f8ff, #e6f2ff);
+        border: 1px solid #d6e9f9;
+    }
+
+    .filter-label { font-size: 0.8rem; font-weight: 700; color: #5a6b7c; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-select, .form-control { border-radius: var(--radius-sm); border: 1px solid #cbd5e0; padding: 8px 12px; font-size: 0.9rem; background-color: #fff; }
+    .form-select:focus, .form-control:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
+
+    /* 멀티 셀렉트 */
+    .dropdown-check-list { position: relative; width: 100%; }
+    .dropdown-check-list .anchor {
+        position: relative; cursor: pointer; display: block;
+        padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: var(--radius-sm);
+        background: #fff; font-size: 0.9rem; color: #2c3e50;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .dropdown-check-list .anchor:after {
+        position: absolute; content: ""; border-left: 2px solid black; border-top: 2px solid black;
+        padding: 3px; right: 15px; top: 35%; transform: rotate(-135deg);
+    }
+    .dropdown-check-list:active .anchor:after { transform: rotate(-45deg); }
+    
+    .dropdown-check-list ul.items {
+        padding: 10px; display: none; margin: 0; border: 1px solid #cbd5e0;
+        border-top: none; position: absolute; top: 100%; left: 0; width: 100%; z-index: 1000;
+        background: #fff; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+        max-height: 300px; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    }
+    .dropdown-check-list ul.items.visible { display: block; }
+    .dropdown-check-list ul.items li { list-style: none; margin-bottom: 5px; font-size: 0.9rem; display: flex; align-items: center; }
+    .dropdown-check-list ul.items li:last-child { margin-bottom: 0; }
+    .dropdown-check-list ul.items li input { margin-right: 8px; width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent-color); }
+    .dropdown-check-list ul.items li label { cursor: pointer; width: 100%; }
+    
+    /* 브랜드 리스트 */
+    .brand-row { background: var(--card-bg); border-radius: var(--radius-md); padding: 15px 25px; margin-bottom: 10px; cursor: pointer; border: 1px solid transparent; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--soft-shadow); transition: all 0.2s ease; }
+    .brand-row:hover { transform: translateY(-3px); box-shadow: var(--hover-shadow); border-color: var(--accent-color); }
+    .rank-badge { width: 30px; height: 30px; background: #ecf0f1; color: #95a5a6; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; margin-right: 15px; font-size: 1rem; }
+    .top-rank .rank-badge { background: linear-gradient(135deg, #3498db, #2980b9); color: #fff; box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); }
+    .brand-name { font-size: 1.1rem; }
+
+    /* 상품 카드 */
+    .item-card { border: none; border-radius: var(--radius-md); overflow: hidden; background: #fff; display: flex; flex-direction: column; box-shadow: var(--soft-shadow); transition: transform 0.2s; }
+    .item-card:hover { transform: translateY(-5px); box-shadow: var(--hover-shadow); }
+    .card-img-wrapper { position: relative; padding-top: 45%; background: #fff; }
+    .card-img-top { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; padding: 10px; }
+    .big-rank-badge { position: absolute; top: 0; left: 0; width: 40px; height: 40px; background: rgba(44, 62, 80, 0.9); color: #fff; font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; border-bottom-right-radius: 14px; }
+    .card-body { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
+    .category-badge { font-size: 0.75rem; padding: 3px 8px; margin-bottom: 6px; }
+    .card-title { font-size: 1rem; margin-bottom: 10px; }
+    .item-stats-display { margin-bottom: 12px; padding: 0; background: none; border-radius: 0; text-align: left; }
+    .price-sub { font-size: 0.85rem; color: #7f8c8d; margin-bottom: 4px; font-weight: 600; }
+    .stat-main-text { font-size: 1.1rem; font-weight: 800; color: #2c3e50; display: flex; align-items: center; justify-content: space-between; }
+    .stat-unit { font-size: 0.8rem; font-weight: normal; color: #95a5a6; margin-left: 2px; }
+    .btn-group-custom { gap: 8px; margin-top: 0; }
+    .btn-custom { padding: 6px 0; font-size: 0.85rem; }
+
+    /* 일자별 편성표 */
+    .timeline-item { display: flex; gap: 15px; margin-bottom: 20px; align-items: stretch; }
+    .time-column { flex: 0 0 80px; display: flex; flex-direction: column; align-items: center; padding-top: 12px; }
+    .time-badge { background: #34495e; color: #fff; padding: 6px 14px; border-radius: 30px; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(44, 62, 80, 0.3); z-index: 2; }
+    .time-line-deco { width: 3px; background: #e0e6ed; flex-grow: 1; margin-top: 5px; margin-bottom: -30px; border-radius: 2px; }
+    .timeline-item:last-child .time-line-deco { display: none; }
+    .schedule-card { flex-grow: 1; background: #ffffff; border-radius: var(--radius-md); overflow: hidden; display: flex; box-shadow: var(--soft-shadow); border: 1px solid rgba(0,0,0,0.03); transition: all 0.2s; }
+    .schedule-card:hover { transform: translateX(5px); border-color: var(--accent-color); }
+    .sc-thumb-box { width: 140px; height: auto; min-height: 140px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; padding: 10px; }
+    .sc-thumb-img { max-width: 100%; max-height: 120px; object-fit: contain; mix-blend-mode: multiply; }
+    .sc-info-box { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(to right, #ffffff, #fafbfc); }
+
+    /* 테이블 스타일 */
+    .history-table-container { border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--soft-shadow); border: 1px solid #eee; }
+    .history-table th { background: #f8f9fa; border-bottom: 2px solid #e9ecef; color: #495057; font-weight: 700; padding: 12px 15px; font-size: 0.85rem; white-space: nowrap; vertical-align: middle; }
+    .history-table td { padding: 12px 15px; vertical-align: middle; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem; color: #333; }
+    .text-truncate-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+
+    /* 검색 통계 */
+    .search-stat-box { background: #eaf4fc; border-radius: var(--radius-md); padding: 20px; display: flex; justify-content: center; gap: 50px; align-items: center; margin-bottom: 20px; border: 1px solid #d6e9f9; }
+    .search-stat-item { text-align: center; }
+    .search-stat-label { font-size: 0.85rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
+    .search-stat-value { font-size: 1.5rem; font-weight: 800; color: #2c3e50; }
+
+    /* 로딩 */
+    .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+    
+    @media (max-width: 768px) {
+       .timeline-item { flex-direction: column; gap: 0; }
+       .time-column { flex-direction: row; align-items: center; width: 100%; flex: auto; margin-bottom: 15px; gap: 15px; }
+       .time-line-deco { display: none; }
+       .schedule-card { flex-direction: column; }
+       .sc-thumb-box { width: 100%; height: 180px; }
+       .nav-pills { display: flex; }
+       .search-stat-box { flex-direction: column; gap: 15px; }
+       .history-table-container { overflow-x: auto; }
+       .history-table th, .history-table td { min-width: 80px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading" class="spinner-overlay">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    <div class="mt-3 fw-bold text-secondary">데이터 분석 중...</div>
+  </div>
+
+  <header class="dashboard-header">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="header-title mb-1"><i class="bi bi-bar-chart-line-fill text-info me-2"></i>2025년 S사 방송상품 운영현황</h3>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container mb-4">
+    <div class="nav nav-pills" id="mainTab" role="tablist">
+        <div class="nav-item">
+            <button class="nav-link active w-100" id="tab-brand-btn" onclick="switchTab('tab-brand')">
+                <i class="bi bi-grid-fill me-2"></i>브랜드/상품 분석
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link w-100" id="tab-daily-btn" onclick="switchTab('tab-daily')">
+                <i class="bi bi-calendar-week-fill me-2"></i>일자별 편성표
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link w-100" id="tab-search-btn" onclick="switchTab('tab-search')">
+                <i class="bi bi-search me-2"></i>검색 및 다운로드
+            </button>
+        </div>
+    </div>
+
+    <div id="filterArea">
+        <div class="custom-card" style="background: #fff; border-left: 5px solid #3498db; padding: 15px 20px;">
+          <div class="d-flex align-items-center gap-3">
+             <i class="bi bi-info-circle-fill text-primary fs-5"></i>
+             <div class="text-secondary fw-medium" style="font-size: 0.9rem;">가중분은 SK스토아 기준으로 치환하였으며, 브랜드/상품정보 및 분류정보는 S사 홈페이지 정보를 준용하였습니다.</div>
+          </div>
+        </div>
+
+        <div class="custom-card filter-pastel">
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="filter-label">분석 주기 (Period)</label>
+              <select id="periodType" class="form-select" onchange="updatePeriodOptions()">
+                <option value="year" selected>연간 (Year)</option>
+                <option value="month">월별 (Month)</option>
+                <option value="week">주차별 (Week)</option>
+                <option value="day">일자별 (Day)</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="filter-label">세부 기간 (다중 선택 가능)</label>
+              
+              <div id="multiSelectWrapper" class="dropdown-check-list" tabindex="100">
+                  <span class="anchor" onclick="toggleCheckList()" id="multiSelectAnchor">기간을 선택하세요</span>
+                  <ul class="items" id="periodCheckList">
+                  </ul>
+              </div>
+
+            </div>
+          </div>
+          
+          <div class="p-3 rounded-3" style="background-color: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.05);">
+            <div class="row g-2">
+               <div class="col-md-2"><label class="filter-label small">MD 분류</label><select id="mdClass" class="form-select form-select-sm" onchange="updateCascadingFilters(0)"><option value="ALL">전체</option></select></div>
+               <div class="col-md-2"><label class="filter-label small">대분류</label><select id="itemClass1" class="form-select form-select-sm" onchange="updateCascadingFilters(1)" disabled><option value="ALL">전체</option></select></div>
+               <div class="col-md-2"><label class="filter-label small">중분류</label><select id="itemClass2" class="form-select form-select-sm" onchange="updateCascadingFilters(2)" disabled><option value="ALL">전체</option></select></div>
+               <div class="col-md-2"><label class="filter-label small">소분류</label><select id="itemClass3" class="form-select form-select-sm" onchange="updateCascadingFilters(3)" disabled><option value="ALL">전체</option></select></div>
+               <div class="col-md-2"><label class="filter-label small">세분류</label><select id="itemClass4" class="form-select form-select-sm" onchange="updateCascadingFilters(4)" disabled><option value="ALL">전체</option></select></div>
+               <div class="col-md-2"><label class="filter-label small">세세분류</label><select id="itemClass5" class="form-select form-select-sm" onchange="updateCascadingFilters(5)" disabled><option value="ALL">전체</option></select></div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </div>
+
+  <div class="container">
+    
+    <div id="tab-brand" class="fade-in">
+      <div id="brandView" class="fade-in">
+        <h5 class="mb-3 fw-bold text-dark"><i class="bi bi-trophy-fill text-warning me-2"></i>브랜드별 가중분 순위</h5>
+        <div id="brandList"></div>
+      </div>
+
+      <div id="itemView" class="fade-in" style="display:none;">
+        <button class="btn btn-outline-dark mb-3 rounded-pill px-4 fw-bold btn-sm" onclick="showBrandList()">
+          <i class="bi bi-arrow-left me-1"></i> 브랜드 목록
+        </button>
+        <div class="detail-header custom-card d-flex justify-content-between align-items-center mb-3 py-3">
+            <div>
+              <h3 class="fw-bold mb-1 text-dark fs-5" id="selectedBrandTitle">브랜드명</h3>
+              <span class="text-muted small">해당 기간 내 상위 인기 상품 리스트</span>
+            </div>
+            <div id="brandStatsBadge" class="d-none d-md-flex gap-4 bg-light px-4 py-2 rounded-4 border"></div>
+        </div>
+        <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-3" id="itemGrid"></div>
+      </div>
+
+      <div id="historyView" class="fade-in" style="display:none;">
+         <button class="btn btn-outline-dark mb-3 rounded-pill px-4 fw-bold btn-sm" onclick="backToItems()">
+          <i class="bi bi-arrow-left me-1"></i> 뒤로가기
+        </button>
+        <h4 class="fw-bold mb-3 fs-5"><i class="bi bi-clock-history text-primary me-2"></i>방송 이력 상세</h4>
+        <div class="history-product-info rounded-4 mb-4 d-flex gap-4 align-items-center shadow-sm" id="historyInfo"></div>
+        <div class="history-table-container">
+          <table class="table history-table table-hover mb-0">
+            <thead>
+              <tr>
+                <th width="15%">방송일자</th><th width="10%">시간</th><th>상품명</th><th width="12%" class="text-end">판매가</th><th width="12%" class="text-end">가중분</th><th width="20%">프로모션/비고</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div> 
+
+    <div id="tab-daily" style="display:none;">
+      <div class="custom-card mb-4" style="background: #fff; padding: 20px;">
+        <label class="filter-label mb-2 d-block">📅 편성 일자 선택</label>
+        <div class="d-flex gap-2">
+          <select id="dailyDateSelect" class="form-select" style="max-width: 250px;" onchange="renderDailySchedule()">
+            <option value="">날짜를 선택하세요</option>
+          </select>
+          <button class="btn btn-primary px-4 rounded-3 fw-bold btn-sm" onclick="renderDailySchedule()">조회</button>
+        </div>
+      </div>
+      <div id="dailyScheduleArea">
+        <div class="text-center p-5 text-muted bg-white rounded-4 shadow-sm">
+           <i class="bi bi-calendar-event fs-1 d-block mb-3 opacity-50"></i>
+           상단에서 날짜를 선택하면<br>해당 일자의 상세 편성표가 표시됩니다.
+        </div>
+      </div>
+    </div> 
+
+    <div id="tab-search" style="display:none;">
+       <div class="custom-card mb-4">
+          <label class="filter-label mb-2 d-block">🔍 통합 검색 (기간 및 카테고리 필터 적용됨)</label>
+          <div class="input-group">
+             <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="브랜드 또는 상품명을 입력하세요" onkeyup="if(window.event.keyCode==13){handleKeywordSearch()}">
+             <button class="btn btn-primary px-4 fw-bold" onclick="handleKeywordSearch()">검색</button>
+          </div>
+       </div>
+
+       <div id="searchResultArea" style="display:none;">
+           <div class="search-stat-box shadow-sm">
+               <div class="search-stat-item">
+                   <div class="search-stat-label">검색 건수</div>
+                   <div class="search-stat-value" id="searchCount">0건</div>
+               </div>
+               <div class="vr"></div>
+               <div class="search-stat-item">
+                   <div class="search-stat-label">총 가중분</div>
+                   <div class="search-stat-value text-primary" id="searchWeight">0분</div>
+               </div>
+           </div>
+
+           <div class="d-flex justify-content-between align-items-center mb-3">
+               <h5 class="fw-bold m-0"><i class="bi bi-list-check me-2"></i>검색 결과 리스트</h5>
+               <button class="btn btn-success btn-sm rounded-pill px-3 fw-bold" onclick="downloadSearchExcel()">
+                   <i class="bi bi-file-earmark-excel-fill me-1"></i>엑셀 다운로드
+               </button>
+           </div>
+
+           <div class="history-table-container">
+               <table class="table history-table table-hover mb-0 align-middle" id="searchTable">
+                   <thead>
+                       <tr>
+                           <th width="12%">방송일자</th>
+                           <th width="8%">시간</th>
+                           <th width="12%">브랜드</th>
+                           <th>상품명</th>
+                           <th width="10%" class="text-end">판매가</th>
+                           <th width="8%" class="text-end">가중분</th>
+                           <th width="15%">프로모션</th>
+                           <th width="10%" class="text-center">상세보기</th>
+                       </tr>
+                   </thead>
+                   <tbody id="searchTableBody"></tbody>
+               </table>
+           </div>
+       </div>
+    </div> 
+  </div>
+
+  <script>
+    // [중요] 깃허브 Raw 데이터 주소 (자신의 저장소 주소로 변경 필요!)
+    // 예: https://raw.githubusercontent.com/사용자명/저장소명/main/data.csv
+    const GITHUB_CSV_URL = "https://raw.githubusercontent.com/from237/ssg_tv/refs/heads/main/data.csv"; 
+
+    let rawData = [];
+    let currentTab = 'brand'; 
+    let historySource = 'brand'; 
+    let currentSearchResults = []; 
+    let brandTabFilteredData = [];
+
+    // CSV 파일 헤더 순서에 맞춘 인덱스 (data.csv와 일치해야 함)
+    // 방송일자,방송시간,채널구분,단순분,가중분,아이템분류1,아이템분류2,아이템분류3,아이템분류4,아이템분류5,브랜드,상품명,판매가,할인가,프로모션,상품ID,이미지URL,상세링크,MD분류
+    const COL = {
+      DATE: 0, TIME: 1, CHANNEL: 2, SIMPLE_MIN: 3, WEIGHT: 4,
+      ITEM_CLS1: 5, ITEM_CLS2: 6, ITEM_CLS3: 7, ITEM_CLS4: 8, ITEM_CLS5: 9,
+      BRAND: 10, NAME: 11, PRICE: 12, DISC_PRICE: 13, PROMOTION: 14,
+      ITEM_ID: 15, IMAGE: 16, LINK: 17, MD_CLS: 18
+    };
+
+    const FILTER_IDS = ['mdClass', 'itemClass1', 'itemClass2', 'itemClass3', 'itemClass4', 'itemClass5'];
+    // 필터와 매핑될 컬럼 인덱스
+    const FILTER_COLS = [COL.MD_CLS, COL.ITEM_CLS1, COL.ITEM_CLS2, COL.ITEM_CLS3, COL.ITEM_CLS4, COL.ITEM_CLS5];
+
+    window.onload = function() {
+      fetchDataFromGitHub();
+
+      // 외부 클릭 시 체크박스 리스트 닫기 이벤트
+      document.addEventListener('click', function(e) {
+          const wrapper = document.getElementById('multiSelectWrapper');
+          if (wrapper && !wrapper.contains(e.target)) {
+              document.getElementById('periodCheckList').classList.remove('visible');
+          }
+      });
+    };
+
+    function handleError(error) {
+      document.getElementById('loading').style.display = 'none';
+      alert("데이터 로딩 실패: " + error.message);
+    }
+
+    // [변경] GitHub CSV 가져오기
+    function fetchDataFromGitHub() {
+        Papa.parse(GITHUB_CSV_URL, {
+            download: true,
+            header: false, // 배열로 받기 위해 false (헤더 포함)
+            skipEmptyLines: true,
+            complete: function(results) {
+                try {
+                    const data = results.data;
+                    if (!data || data.length < 2) throw new Error("데이터가 없습니다.");
+                    
+                    // 헤더 제거하고 데이터만 저장
+                    rawData = data.slice(1);
+                    
+                    loadInitialFilter(); 
+                    updatePeriodOptions();
+                    initDailyTab();
+
+                    document.getElementById('loading').style.display = 'none';
+                } catch (e) {
+                    handleError(e);
+                }
+            },
+            error: function(err) {
+                handleError(err);
+            }
+        });
+    }
+
+    // --- 탭 전환 로직 ---
+    function switchTab(tabId) {
+      document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId + '-btn').classList.add('active');
+
+      document.getElementById('tab-brand').style.display = 'none';
+      document.getElementById('tab-daily').style.display = 'none';
+      document.getElementById('tab-search').style.display = 'none'; 
+      document.getElementById(tabId).style.display = 'block';
+      
+      currentTab = tabId.replace('tab-', '');
+
+      // 필터 영역 표시/숨김 관리 (Daily 탭에서는 숨김)
+      if (currentTab === 'daily') {
+          document.getElementById('filterArea').style.display = 'none';
+      } else {
+          document.getElementById('filterArea').style.display = 'block';
+      }
+
+      // 브랜드 탭으로 돌아왔을 때 필터 적용 상태 유지
+      if (currentTab === 'brand') {
+          const isHistoryMode = document.getElementById('historyView').style.display === 'block';
+          if (isHistoryMode) document.getElementById('filterArea').style.display = 'none';
+          else resetAndRender();
+      }
+    }
+
+    // ============================================================
+    // [UI] 멀티 셀렉트 Dropdown 관련
+    // ============================================================
+    function toggleCheckList() {
+        const list = document.getElementById('periodCheckList');
+        if (list.classList.contains('visible')) list.classList.remove('visible');
+        else list.classList.add('visible');
+    }
+
+    // 체크박스 상태 변경 시 실행
+    function updateSelectedText() {
+        const checkboxes = document.querySelectorAll('#periodCheckList input[type="checkbox"]:not(#chk_all)');
+        const checked = Array.from(checkboxes).filter(cb => cb.checked);
+        const anchor = document.getElementById('multiSelectAnchor');
+        const chkAll = document.getElementById('chk_all');
+        
+        // 전체 선택 상태 동기화
+        if (chkAll) {
+             chkAll.checked = (checked.length === checkboxes.length && checkboxes.length > 0);
+        }
+
+        if (checked.length === 0) {
+            anchor.innerHTML = '선택된 기간 없음';
+        } else if (checked.length === checkboxes.length) {
+            anchor.innerHTML = '전체 선택됨';
+        } else if (checked.length === 1) {
+            anchor.innerHTML = checked[0].value;
+        } else {
+            anchor.innerHTML = `${checked[0].value} 외 ${checked.length - 1}건`;
+        }
+        
+        onFilterChanged();
+    }
+
+    function getSelectedPeriodValues() {
+        const checkboxes = document.querySelectorAll('#periodCheckList input[type="checkbox"]:not(#chk_all)');
+        return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+    }
+
+    // ============================================================
+    // [공통 필터 로직] - 브랜드 탭과 검색 탭에서 공통 사용
+    // ============================================================
+    function getFilteredDataBasedOnDropdowns() {
+      const type = document.getElementById('periodType').value;
+      const selectedPeriods = getSelectedPeriodValues(); // 다중 선택 값 가져오기
+      const filters = FILTER_IDS.map(id => document.getElementById(id).value);
+
+      if (selectedPeriods.length === 0) return [];
+
+      return rawData.filter(r => {
+        // 1. 기간 필터 (다중 선택 포함)
+        const d = r[COL.DATE]; if(!d) return false;
+        const m = moment(d); if(!m.isValid()) return false;
+        let k = '';
+        if(type === 'year') k = m.format('YYYY년');
+        else if(type === 'month') k = m.format('YYYY-MM');
+        else if(type === 'week') { const startOfWeek = m.startOf('isoWeek').format('YYYY-MM-DD'); const weekNum = m.isoWeek(); k = `${startOfWeek} (${weekNum}주차)`; }
+        else if(type === 'day') k = m.format('YYYY-MM-DD');
+        
+        if(!selectedPeriods.includes(k)) return false; // 선택된 리스트에 포함되지 않으면 제외
+
+        // 2. 카테고리 필터
+        for(let i=0; i<filters.length; i++) { 
+            if(filters[i] !== 'ALL' && r[FILTER_COLS[i]] !== filters[i]) return false; 
+        }
+        return true;
+      });
+    }
+
+    function onFilterChanged() {
+        if(currentTab === 'brand') resetAndRender();
+        // 검색 탭에서는 검색 버튼 클릭 시 필터가 반영되므로 자동 실행 안함
+    }
+
+    function loadInitialFilter() {
+        const mdCol = FILTER_COLS[0];
+        const uniqueValues = new Set();
+        rawData.forEach(r => { if(r[mdCol]) uniqueValues.add(r[mdCol]); });
+        populateSelect(document.getElementById(FILTER_IDS[0]), Array.from(uniqueValues).sort());
+    }
+
+    function updateCascadingFilters(changedLevel) {
+      for(let i = changedLevel + 1; i < FILTER_IDS.length; i++) {
+        const sel = document.getElementById(FILTER_IDS[i]);
+        sel.innerHTML = '<option value="ALL">전체</option>'; sel.disabled = true;
+      }
+      const currentVal = document.getElementById(FILTER_IDS[changedLevel]).value;
+      
+      if (currentVal === 'ALL') { onFilterChanged(); return; }
+
+      let validRows = rawData; 
+      for(let i=0; i <= changedLevel; i++) {
+        const val = document.getElementById(FILTER_IDS[i]).value;
+        if(val !== 'ALL') validRows = validRows.filter(r => r[FILTER_COLS[i]] === val);
+      }
+      
+      if (changedLevel < FILTER_IDS.length - 1) {
+        const nextLevel = changedLevel + 1;
+        const nextCol = FILTER_COLS[nextLevel];
+        const nextValues = new Set();
+        validRows.forEach(r => { if(r[nextCol]) nextValues.add(r[nextCol]); });
+        const nextSelect = document.getElementById(FILTER_IDS[nextLevel]);
+        populateSelect(nextSelect, Array.from(nextValues).sort());
+        if(nextValues.size > 0) nextSelect.disabled = false;
+      }
+      onFilterChanged();
+    }
+
+    function populateSelect(selectEl, list) {
+      selectEl.innerHTML = '<option value="ALL">전체</option>';
+      list.forEach(v => {
+        const opt = document.createElement('option'); opt.value = v; opt.text = v; selectEl.appendChild(opt);
+      });
+    }
+
+    // 기간 옵션 생성 (체크박스 리스트 형태로 변경 + 전체 선택 기능)
+    function updatePeriodOptions() {
+      try {
+        const type = document.getElementById('periodType').value;
+        const periodSet = new Set();
+        rawData.forEach(r => {
+          const d = r[COL.DATE]; if(!d) return;
+          const m = moment(d); if (!m.isValid()) return;
+          let key = '', sortValue = ''; 
+          if(type === 'year') { key = m.format('YYYY년'); sortValue = m.format('YYYY'); }
+          else if(type === 'month') { key = m.format('YYYY-MM'); sortValue = m.format('YYYYMM'); }
+          else if(type === 'week') { const startOfWeek = m.startOf('isoWeek').format('YYYY-MM-DD'); const weekNum = m.isoWeek(); key = `${startOfWeek} (${weekNum}주차)`; sortValue = startOfWeek; }
+          else if(type === 'day') { key = m.format('YYYY-MM-DD'); sortValue = m.format('YYYYMMDD'); }
+          if(key) periodSet.add(JSON.stringify({key: key, val: sortValue}));
+        });
+        
+        let sortedList = Array.from(periodSet).map(JSON.parse);
+        // 내림차순 정렬 (최신이 위로)
+        if (type === 'week' || type === 'day') sortedList.sort((a, b) => b.val.localeCompare(a.val)); 
+        else sortedList.sort((a, b) => b.val.localeCompare(a.val)); 
+        
+        // 체크박스 리스트 생성
+        const ul = document.getElementById('periodCheckList');
+        ul.innerHTML = '';
+
+        // [전체 선택] 항목 추가
+        const liAll = document.createElement('li');
+        liAll.style.cssText = 'border-bottom: 1px solid #eee; margin-bottom: 5px; padding-bottom: 5px; font-weight: 700;';
+        
+        const chkAll = document.createElement('input');
+        chkAll.type = 'checkbox';
+        chkAll.id = 'chk_all';
+        chkAll.value = 'ALL';
+        // "전체 선택" 클릭 이벤트
+        chkAll.addEventListener('change', function() {
+            const allBoxes = document.querySelectorAll('#periodCheckList input[type="checkbox"]:not(#chk_all)');
+            allBoxes.forEach(cb => cb.checked = chkAll.checked);
+            updateSelectedText();
+        });
+
+        const labelAll = document.createElement('label');
+        labelAll.htmlFor = 'chk_all';
+        labelAll.innerText = '전체 선택';
+
+        liAll.appendChild(chkAll);
+        liAll.appendChild(labelAll);
+        ul.appendChild(liAll);
+
+        // 개별 항목 추가
+        sortedList.forEach((obj, index) => { 
+            const li = document.createElement('li');
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = obj.key;
+            checkbox.id = 'chk_' + index;
+            
+            // 기본값: 가장 최신 1개만 선택 (전체 로딩 방지)
+            if(index === 0) checkbox.checked = true; 
+            
+            checkbox.addEventListener('change', updateSelectedText);
+
+            const label = document.createElement('label');
+            label.htmlFor = 'chk_' + index;
+            label.innerText = obj.key;
+
+            li.appendChild(checkbox);
+            li.appendChild(label);
+            ul.appendChild(li);
+        });
+
+        // 텍스트 업데이트 및 필터 적용
+        updateSelectedText();
+
+      } catch (e) { console.error(e); }
+    }
+
+    // ============================================================
+    // [Tab 1 Logic] 브랜드/상품
+    // ============================================================
+    function resetAndRender() {
+      document.getElementById('brandView').style.display = 'block';
+      document.getElementById('itemView').style.display = 'none';
+      document.getElementById('historyView').style.display = 'none';
+      document.getElementById('filterArea').style.display = 'block';
+      
+      // 공통 필터 함수 사용
+      brandTabFilteredData = getFilteredDataBasedOnDropdowns();
+      renderBrandList();
+    }
+
+    function renderBrandList() {
+      const container = document.getElementById('brandList');
+      container.innerHTML = '';
+      if(brandTabFilteredData.length === 0) { container.innerHTML = `<div class="text-center p-5 text-muted bg-white border rounded">데이터가 없습니다.</div>`; return; }
+
+      const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
+      const brandMap = {};
+      brandTabFilteredData.forEach(r => {
+        const brand = r[COL.BRAND] || '기타';
+        const weight = getNum(r[COL.WEIGHT]);
+        if(!brandMap[brand]) brandMap[brand] = { weight: 0, count: 0 };
+        brandMap[brand].weight += weight;
+        brandMap[brand].count += 1;
+      });
+
+      Object.entries(brandMap)
+        .sort((a, b) => b[1].weight - a[1].weight)
+        .forEach(([brand, val], idx) => {
+          const rank = idx + 1;
+          const html = `
+            <div class="brand-row ${rank <= 3 ? 'top-rank' : ''}" onclick="renderItems('${brand}')">
+              <div class="d-flex align-items-center gap-2">
+                <div class="rank-badge">${rank}</div>
+                <div><h5 class="brand-name mb-0 fw-bold">${brand}</h5></div>
+              </div>
+              <div class="d-flex align-items-center gap-4 text-end">
+                <div><div class="text-muted small mb-1" style="font-size:0.75rem">누적 가중분</div><div class="fw-bold text-dark">${Math.round(val.weight).toLocaleString()}분</div></div>
+                <div class="small text-secondary"><i class="bi bi-chevron-right"></i></div>
+              </div>
+            </div>`;
+          container.insertAdjacentHTML('beforeend', html);
+        });
+    }
+
+    function renderItems(brandName) {
+      document.getElementById('brandView').style.display = 'none';
+      document.getElementById('itemView').style.display = 'block';
+      document.getElementById('selectedBrandTitle').innerText = brandName;
+      window.scrollTo(0, 0);
+
+      const container = document.getElementById('itemGrid');
+      container.innerHTML = '';
+      const brandItems = brandTabFilteredData.filter(r => (r[COL.BRAND] || '기타') === brandName);
+      const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
+      
+      let totalCount = 0; let totalWeight = 0; 
+      const itemMap = {};
+
+      brandItems.forEach(r => {
+        const weight = getNum(r[COL.WEIGHT]);
+        totalCount++; totalWeight += weight;
+        const id = r[COL.ITEM_ID];
+        if(!itemMap[id]) itemMap[id] = { id: id, name: r[COL.NAME], price: getNum(r[COL.PRICE]), img: r[COL.IMAGE], link: r[COL.LINK], weight: 0, count: 0, itemCls: r[COL.ITEM_CLS2] || '' };
+        itemMap[id].weight += weight; itemMap[id].count += 1; 
+      });
+
+      document.getElementById('brandStatsBadge').innerHTML = `
+        <div class="text-center"><div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:0.75rem">총 방송횟수</div><div class="fs-5 fw-black text-dark">${totalCount}</div></div>
+        <div class="vr"></div>
+        <div class="text-center"><div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:0.75rem">총 가중분</div><div class="fs-5 fw-black text-primary">${Math.round(totalWeight).toLocaleString()}</div></div>`;
+
+      const sortedItems = Object.values(itemMap).sort((a,b) => b.weight - a.weight);
+      
+      sortedItems.forEach((item, idx) => {
+        const rank = idx + 1;
+        const html = `
+          <div class="col">
+            <div class="item-card h-100">
+              <div class="card-img-wrapper">
+                <img src="${item.img}" class="card-img-top" onerror="this.src='https://via.placeholder.com/300x300?text=No+Image'">
+                <div class="big-rank-badge" style="background:${rank<=3?'linear-gradient(135deg, #e74c3c, #c0392b)':'rgba(44, 62, 80, 0.9)'}">${rank}</div>
+              </div>
+              <div class="card-body">
+                <div><span class="badge bg-light text-secondary mb-2 category-badge">${item.itemCls}</span></div>
+                <h6 class="card-title text-truncate fw-bold" title="${item.name}">${item.name}</h6>
+                <div class="item-stats-display">
+                  <div class="price-sub">판매가 ${item.price.toLocaleString()}원</div>
+                  <div class="stat-main-text">
+                    <div><span class="text-dark">${item.count}</span><span class="stat-unit">회</span></div>
+                    <div><span class="text-primary">${Math.round(item.weight).toLocaleString()}</span><span class="stat-unit">분</span></div>
+                  </div>
+                </div>
+                <div class="d-flex gap-2 mt-auto btn-group-custom">
+                  <a href="${item.link}" target="_blank" class="btn btn-dark flex-fill fw-bold btn-custom">상품상세</a>
+                  <button class="btn btn-outline-primary flex-fill fw-bold btn-custom" onclick="historySource='brand'; renderHistory('${item.id}')">방송이력</button>
+                </div>
+              </div>
+            </div>
+          </div>`;
+        container.insertAdjacentHTML('beforeend', html);
+      });
+    }
+
+    function renderHistory(itemId) {
+      if(currentTab === 'daily' || currentTab === 'search') {
+        document.getElementById('tab-daily').style.display = 'none';
+        document.getElementById('tab-search').style.display = 'none';
+        document.getElementById('tab-brand').style.display = 'block';
+        document.getElementById('tab-brand-btn').classList.add('active');
+        document.getElementById('tab-daily-btn').classList.remove('active');
+        document.getElementById('tab-search-btn').classList.remove('active');
+      }
+
+      document.getElementById('brandView').style.display = 'none';
+      document.getElementById('itemView').style.display = 'none';
+      document.getElementById('historyView').style.display = 'block';
+      document.getElementById('filterArea').style.display = 'none'; 
+      window.scrollTo(0, 0);
+
+      const historyItems = rawData.filter(r => r[COL.ITEM_ID] === itemId);
+      historyItems.sort((a, b) => {
+         const dA = new Date(a[COL.DATE] + ' ' + (a[COL.TIME]||''));
+         const dB = new Date(b[COL.DATE] + ' ' + (b[COL.TIME]||''));
+         return dB - dA;
+      });
+
+      if(historyItems.length === 0) return;
+      const info = historyItems[0];
+      const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
+      
+      document.getElementById('historyInfo').innerHTML = `
+        <img src="${info[COL.IMAGE]}" class="rounded bg-white shadow-sm" style="width:80px;height:80px;object-fit:contain;border:1px solid #eee; padding:5px;" onerror="this.src='https://via.placeholder.com/100'">
+        <div>
+           <span class="badge bg-primary bg-opacity-10 text-primary mb-2 category-badge">${info[COL.BRAND]}</span>
+           <h5 class="fw-bold m-0 text-dark fs-6">${info[COL.NAME]}</h5>
+           <div class="text-muted mt-2 small"><i class="bi bi-camera-reels-fill me-1"></i>총 <strong>${historyItems.length}회</strong> 방송 진행</div>
+        </div>
+      `;
+
+      const tbody = document.getElementById('historyTableBody');
+      tbody.innerHTML = '';
+      historyItems.forEach(row => {
+        const tr = `
+          <tr>
+            <td><span class="fw-bold text-dark">${row[COL.DATE]}</span></td>
+            <td>${row[COL.TIME] || '-'}</td>
+            <td>${row[COL.NAME]}</td>
+            <td class="text-end fw-bold">${getNum(row[COL.PRICE]).toLocaleString()}원</td>
+            <td class="text-end text-primary fw-bold">${getNum(row[COL.WEIGHT]).toLocaleString()}분</td>
+            <td class="small text-muted">${row[COL.PROMOTION] || ''}</td>
+          </tr>`;
+        tbody.insertAdjacentHTML('beforeend', tr);
+      });
+    }
+
+    function backToItems() {
+      document.getElementById('historyView').style.display = 'none';
+      
+      if (historySource === 'daily') {
+        document.getElementById('tab-brand').style.display = 'none';
+        document.getElementById('tab-daily').style.display = 'block';
+        document.getElementById('tab-brand-btn').classList.remove('active');
+        document.getElementById('tab-daily-btn').classList.add('active');
+        currentTab = 'daily';
+      } else if (historySource === 'search') {
+        document.getElementById('tab-brand').style.display = 'none';
+        document.getElementById('tab-search').style.display = 'block';
+        document.getElementById('tab-brand-btn').classList.remove('active');
+        document.getElementById('tab-search-btn').classList.add('active');
+        currentTab = 'search';
+        document.getElementById('filterArea').style.display = 'block';
+      } else {
+        document.getElementById('itemView').style.display = 'block';
+        document.getElementById('filterArea').style.display = 'block';
+      }
+      window.scrollTo(0, 0);
+    }
+    
+    function showBrandList() {
+      document.getElementById('itemView').style.display = 'none';
+      document.getElementById('brandView').style.display = 'block';
+    }
+
+    // ============================================================
+    // [Tab 2 Logic] 일자별 편성표
+    // ============================================================
+    function initDailyTab() {
+      const dateSet = new Set();
+      rawData.forEach(r => {
+        const d = r[COL.DATE];
+        if (d && moment(d).isValid()) dateSet.add(moment(d).format('YYYY-MM-DD'));
+      });
+      const sortedDates = Array.from(dateSet).sort().reverse();
+
+      const sel = document.getElementById('dailyDateSelect');
+      sel.innerHTML = '<option value="">날짜를 선택하세요</option>';
+      sortedDates.forEach(dateStr => {
+        const opt = document.createElement('option'); opt.value = dateStr; opt.text = dateStr; sel.appendChild(opt);
+      });
+
+      const today = moment().format('YYYY-MM-DD');
+      let closestDate = sortedDates[0]; 
+      
+      for (let d of sortedDates) {
+        if (d <= today) {
+            closestDate = d;
+            break;
+        }
+      }
+      
+      if (closestDate) {
+          sel.value = closestDate;
+          renderDailySchedule();
+      }
+    }
+
+    function renderDailySchedule() {
+      const selectedDate = document.getElementById('dailyDateSelect').value;
+      const container = document.getElementById('dailyScheduleArea');
+      
+      if (!selectedDate) {
+        container.innerHTML = '<div class="text-center p-5 text-muted bg-white rounded-4 shadow-sm"><i class="bi bi-calendar-event fs-1 d-block mb-3 opacity-50"></i>날짜를 선택해주세요.</div>';
+        return;
+      }
+
+      const dayItems = rawData.filter(r => {
+        const d = r[COL.DATE];
+        return d && moment(d).format('YYYY-MM-DD') === selectedDate;
+      });
+
+      if (dayItems.length === 0) {
+        container.innerHTML = '<div class="text-center p-5 bg-white rounded-4 shadow-sm">해당 날짜에 편성 정보가 없습니다.</div>';
+        return;
+      }
+
+      dayItems.sort((a, b) => {
+         const tA = a[COL.TIME] || '00:00';
+         const tB = b[COL.TIME] || '00:00';
+         return tA.localeCompare(tB);
+      });
+
+      let html = '';
+      const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
+
+      dayItems.forEach(item => {
+        const time = item[COL.TIME] || '00:00';
+        const price = getNum(item[COL.PRICE]).toLocaleString();
+        
+        html += `
+          <div class="timeline-item fade-in">
+            <div class="time-column">
+              <div class="time-badge">${time}</div>
+              <div class="time-line-deco"></div>
+            </div>
+            
+            <div class="schedule-card">
+              <div class="sc-thumb-box">
+                <img src="${item[COL.IMAGE]}" class="sc-thumb-img" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+              </div>
+              <div class="sc-info-box">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                   <span class="badge bg-secondary bg-opacity-10 text-secondary category-badge">${item[COL.BRAND]}</span>
+                   <span class="fw-bold text-primary small">${item[COL.WEIGHT]}분</span>
+                </div>
+                <h5 class="fw-bold mb-2 text-dark text-truncate fs-6" style="max-width: 100%;" title="${item[COL.NAME]}">${item[COL.NAME]}</h5>
+                <div class="d-flex align-items-center gap-2 text-muted small mb-3">
+                   <span>${item[COL.ITEM_CLS2] || item[COL.ITEM_CLS1]}</span>
+                   <span class="border-start ps-2 text-dark fw-bold">${price}원</span>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                    <div class="p-2 bg-light rounded text-secondary small flex-grow-1 me-3 text-truncate">
+                      ${item[COL.PROMOTION] ? '<i class="bi bi-gift-fill me-1 text-danger"></i> ' + item[COL.PROMOTION] : '<span class="text-muted opacity-50">프로모션 없음</span>'}
+                    </div>
+                    
+                    <button class="btn btn-primary btn-sm rounded-pill px-3 py-1 fw-bold btn-custom" 
+                            onclick="historySource='daily'; renderHistory('${item[COL.ITEM_ID]}')">
+                        상세보기 <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // ============================================================
+    // [Tab 3 Logic] 검색 및 다운로드
+    // ============================================================
+    function handleKeywordSearch() {
+        const keyword = document.getElementById('searchInput').value.trim();
+        const container = document.getElementById('searchResultArea');
+        const tbody = document.getElementById('searchTableBody');
+
+        if (!keyword) {
+            alert("검색어를 입력해주세요.");
+            return;
+        }
+
+        const baseData = getFilteredDataBasedOnDropdowns();
+        
+        const results = baseData.filter(r => {
+            const brand = (r[COL.BRAND] || '').toString();
+            const name = (r[COL.NAME] || '').toString();
+            return brand.includes(keyword) || name.includes(keyword);
+        });
+
+        currentSearchResults = results;
+
+        if (results.length === 0) {
+            alert("조건에 맞는 검색 결과가 없습니다.");
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'block';
+        
+        let totalWeight = 0;
+        const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
+
+        results.forEach(r => {
+            totalWeight += getNum(r[COL.WEIGHT]);
+        });
+
+        document.getElementById('searchCount').innerText = `${results.length}건`;
+        document.getElementById('searchWeight').innerText = `${totalWeight.toLocaleString()}분`;
+
+        results.sort((a, b) => {
+            const dateA = a[COL.DATE] + (a[COL.TIME] || '');
+            const dateB = b[COL.DATE] + (b[COL.TIME] || '');
+            return dateB.localeCompare(dateA); 
+        });
+
+        let html = '';
+        results.forEach(row => {
+            html += `
+                <tr>
+                    <td>${row[COL.DATE]}</td>
+                    <td>${row[COL.TIME] || '-'}</td>
+                    <td class="fw-bold text-secondary">${row[COL.BRAND]}</td>
+                    <td class="text-start">
+                         <div class="text-truncate-2" title="${row[COL.NAME]}">${row[COL.NAME]}</div>
+                    </td>
+                    <td class="text-end fw-bold">${getNum(row[COL.PRICE]).toLocaleString()}원</td>
+                    <td class="text-end text-primary fw-bold">${getNum(row[COL.WEIGHT]).toLocaleString()}분</td>
+                    <td class="small text-muted text-start">${row[COL.PROMOTION] || ''}</td>
+                    <td class="text-center">
+                         <a href="${row[COL.LINK]}" target="_blank" class="btn btn-sm btn-outline-dark fw-bold">
+                           상세보기
+                         </a>
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    }
+
+    function downloadSearchExcel() {
+        if (!currentSearchResults || currentSearchResults.length === 0) {
+            alert("다운로드할 데이터가 없습니다.");
+            return;
+        }
+
+        let csvContent = "\uFEFF"; 
+        csvContent += "방송일자,시간,브랜드,상품명,판매가,가중분,프로모션,링크\n";
+
+        currentSearchResults.forEach(row => {
+            const rowStr = [
+                `"${row[COL.DATE]}"`,
+                `"${row[COL.TIME] || ''}"`,
+                `"${row[COL.BRAND].replace(/"/g, '""')}"`,
+                `"${row[COL.NAME].replace(/"/g, '""')}"`,
+                `"${row[COL.PRICE]}"`,
+                `"${row[COL.WEIGHT]}"`,
+                `"${(row[COL.PROMOTION] || '').replace(/"/g, '""')}"`,
+                `"${(row[COL.LINK] || '')}"`
+            ].join(",");
+            csvContent += rowStr + "\n";
+        });
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        const todayStr = moment().format('YYYYMMDD');
+        
+        link.setAttribute("href", url);
+        link.setAttribute("download", `검색결과_${document.getElementById('searchInput').value}_${todayStr}.csv`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>
