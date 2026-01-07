@@ -12,14 +12,17 @@ import pandas as pd
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ==========================================
-# [설정] 파일명 (GitHub Action과 통일)
+# [설정] 1. 파일명 및 수집 날짜 고정
 # ==========================================
-FILENAME = "data.csv"
+FILENAME = "data.csv"   # 깃허브 액션 파일명
+START_DATE = date(2026, 1, 5) # 시작일 강제 고정
+END_DATE = date(2026, 1, 6)   # 종료일 강제 고정 (원하는 만큼 늘려도 됨)
+
 WEIGHT_FOLDER = "weights"
 LOADED_WEIGHTS_MAP = {}
 
 # ==========================================
-# [설정] MD 분류 및 카테고리 매핑
+# [설정] MD 분류 로직
 # ==========================================
 PB_BRANDS = ["에디티드", "에디션S", "블루핏", "여유", "엘라코닉"]
 
@@ -96,40 +99,11 @@ def calc_duration_minutes(time_str):
         return int((te - ts).total_seconds() / 60)
     except: return 0
 
-# ==========================================
-# [핵심] 날짜 자동 계산 함수
-# ==========================================
-def get_date_range():
-    today = date.today()
-    # 기본값: 1월 5일부터 (만약 파일이 없거나 읽기 실패하면 이 날짜부터 시작)
-    start_date = date(2026, 1, 5) 
-
-    if os.path.exists(FILENAME):
-        try:
-            print(f"📂 {FILENAME} 읽는 중...")
-            df = pd.read_csv(FILENAME, encoding='utf-8-sig')
-            if not df.empty and '방송일자' in df.columns:
-                last_date_str = df['방송일자'].max() # 가장 마지막 날짜 (예: 2026-01-04)
-                last_date = datetime.strptime(last_date_str, "%Y-%m-%d").date()
-                
-                # 마지막 데이터가 오늘보다 이전이면, 그 다음날부터 수집
-                if last_date < today:
-                    start_date = last_date + timedelta(days=1)
-                    print(f"🔄 마지막 데이터: {last_date} -> {start_date}부터 수집 시작")
-                else:
-                    start_date = today # 이미 최신이면 오늘것만
-                    print("✅ 이미 최신 데이터까지 있습니다. 오늘 날짜만 확인합니다.")
-        except Exception as e:
-            print(f"⚠️ 파일 읽기 실패 (기본값 1월 5일로 시작): {e}")
-
-    return start_date, today
-
 def run():
-    start_date, end_date = get_date_range()
-    print(f"🚀 수집 시작: {start_date} ~ {end_date}")
+    print(f"🚀 [수동 모드] 수집 시작: {START_DATE} ~ {END_DATE}")
 
+    # 파일이 있으면 'a'(이어쓰기), 없으면 'w'(새로쓰기)
     file_exists = os.path.exists(FILENAME)
-    # 파일이 있으면 'a'(추가), 없으면 'w'(새로쓰기)
     mode = 'a' if file_exists else 'w'
     
     headers = [
@@ -143,23 +117,42 @@ def run():
     with open(FILENAME, mode, newline='', encoding='utf-8-sig') as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(headers) # 헤더는 파일 처음 만들때만
+            writer.writerow(headers)
 
         session = requests.Session()
-        session.headers.update({"User-Agent": "Mozilla/5.0", "X-Requested-With": "XMLHttpRequest"})
+        # [중요] 한국 브라우저처럼 위장하는 헤더 추가
+        session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html, */*; q=0.01",
+            "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Referer": "https://www.shinsegaetvshopping.com/broadcast/tvschedule",
+            "X-Requested-With": "XMLHttpRequest"
+        })
 
-        delta = (end_date - start_date).days
+        delta = (END_DATE - START_DATE).days
 
         for i in range(delta + 1):
-            target_date = start_date + timedelta(days=i)
+            target_date = START_DATE + timedelta(days=i)
             p_date = target_date.strftime("%Y/%m/%d")
             s_date = target_date.strftime("%Y-%m-%d")
-            print(f"[{i + 1}/{delta + 1}] 📅 {s_date}...", end="")
+            print(f"[{i + 1}] 📅 {s_date}...", end="")
 
             try:
                 url = "https://www.shinsegaetvshopping.com/broadcast/tvschedule-ajax"
-                resp = session.get(url, params={"fromDate": p_date, "tomorrowYn": "N", "_": int(time.time() * 1000)},
-                                   timeout=10, verify=False)
+                # 타임스탬프 등 파라미터 동일
+                params = {
+                    "fromDate": p_date,
+                    "tomorrowYn": "N",
+                    "_": int(time.time() * 1000)
+                }
+                
+                resp = session.get(url, params=params, timeout=15, verify=False)
+                
+                # 응답 체크
+                if resp.status_code != 200:
+                    print(f" ❌ 서버 응답 오류 ({resp.status_code})")
+                    continue
+
                 soup = BeautifulSoup(resp.text, "html.parser")
                 dl_list = soup.select("dl")
 
@@ -209,16 +202,16 @@ def run():
                                     md_class
                                 ])
                             except: continue
-
+                    
                     if day_data:
                         writer.writerows(day_data)
                         print(f" ✅ {len(day_data)}건 저장")
                     else:
-                        print(f" ⚠️ 데이터 없음")
+                        print(f" ⚠️ 데이터 없음 (파싱 실패)")
                 else:
-                    print(f" ⚠️ 방송 정보 없음")
+                    print(f" ⚠️ 방송 정보 없음 (차단 가능성 높음)")
                 
-                time.sleep(1)
+                time.sleep(2) # 봇 탐지 회피를 위해 딜레이 약간 증가
             except Exception as e:
                 print(f" ❌ 에러: {e}")
 
