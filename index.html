@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title> S사 방송상품 운영요약</title>
+  <title>S사 방송상품 운영요약</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,6 +12,8 @@
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 
   <style>
     :root {
@@ -78,12 +80,14 @@
     .dropdown-check-list ul.items li input { margin-right: 8px; width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent-color); }
     .dropdown-check-list ul.items li label { cursor: pointer; width: 100%; }
     
+    /* Brand Tab Styles */
     .brand-row { background: var(--card-bg); border-radius: var(--radius-md); padding: 15px 25px; margin-bottom: 10px; cursor: pointer; border: 1px solid transparent; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--soft-shadow); transition: all 0.2s ease; }
     .brand-row:hover { transform: translateY(-3px); box-shadow: var(--hover-shadow); border-color: var(--accent-color); }
     .rank-badge { width: 30px; height: 30px; background: #ecf0f1; color: #95a5a6; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; margin-right: 15px; font-size: 1rem; }
     .top-rank .rank-badge { background: linear-gradient(135deg, #3498db, #2980b9); color: #fff; box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); }
     .brand-name { font-size: 1.1rem; }
 
+    /* Item Card Styles */
     .item-card { border: none; border-radius: var(--radius-md); overflow: hidden; background: #fff; display: flex; flex-direction: column; box-shadow: var(--soft-shadow); transition: transform 0.2s; }
     .item-card:hover { transform: translateY(-5px); box-shadow: var(--hover-shadow); }
     .card-img-wrapper { position: relative; padding-top: 45%; background: #fff; }
@@ -99,6 +103,7 @@
     .btn-group-custom { gap: 8px; margin-top: 0; }
     .btn-custom { padding: 6px 0; font-size: 0.85rem; }
 
+    /* Timeline Styles */
     .timeline-item { display: flex; gap: 15px; margin-bottom: 20px; align-items: stretch; }
     .time-column { flex: 0 0 80px; display: flex; flex-direction: column; align-items: center; padding-top: 12px; }
     .time-badge { background: #34495e; color: #fff; padding: 6px 14px; border-radius: 30px; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(44, 62, 80, 0.3); z-index: 2; }
@@ -110,15 +115,25 @@
     .sc-thumb-img { max-width: 100%; max-height: 120px; object-fit: contain; mix-blend-mode: multiply; }
     .sc-info-box { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(to right, #ffffff, #fafbfc); }
 
+    /* Table Styles */
     .history-table-container { border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--soft-shadow); border: 1px solid #eee; }
     .history-table th { background: #f8f9fa; border-bottom: 2px solid #e9ecef; color: #495057; font-weight: 700; padding: 12px 15px; font-size: 0.85rem; white-space: nowrap; vertical-align: middle; }
     .history-table td { padding: 12px 15px; vertical-align: middle; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem; color: #333; }
     .text-truncate-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
 
+    /* Search Styles */
     .search-stat-box { background: #eaf4fc; border-radius: var(--radius-md); padding: 20px; display: flex; justify-content: center; gap: 50px; align-items: center; margin-bottom: 20px; border: 1px solid #d6e9f9; }
     .search-stat-item { text-align: center; }
     .search-stat-label { font-size: 0.85rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
     .search-stat-value { font-size: 1.5rem; font-weight: 800; color: #2c3e50; }
+
+    /* Trend Chart Styles */
+    .chart-container { position: relative; height: 300px; width: 100%; }
+    .chart-card-title { font-size: 1.1rem; font-weight: 700; color: #2c3e50; margin-bottom: 15px; border-left: 4px solid var(--accent-color); padding-left: 10px; }
+    .kpi-card { text-align: center; padding: 20px; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .kpi-title { font-size: 0.9rem; color: #7f8c8d; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+    .kpi-value { font-size: 2rem; font-weight: 800; color: var(--primary-color); }
+    .kpi-sub { font-size: 0.8rem; color: #95a5a6; margin-top: 5px; }
 
     .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
     
@@ -128,10 +143,12 @@
        .time-line-deco { display: none; }
        .schedule-card { flex-direction: column; }
        .sc-thumb-box { width: 100%; height: 180px; }
-       .nav-pills { display: flex; }
+       .nav-pills { display: flex; flex-wrap: wrap; }
+       .nav-item { flex: 1 1 50%; }
        .search-stat-box { flex-direction: column; gap: 15px; }
        .history-table-container { overflow-x: auto; }
        .history-table th, .history-table td { min-width: 80px; }
+       .chart-container { height: 250px; }
     }
   </style>
 </head>
@@ -155,7 +172,12 @@
   <div class="container mb-4">
     <div class="nav nav-pills" id="mainTab" role="tablist">
         <div class="nav-item">
-            <button class="nav-link active w-100" id="tab-brand-btn" onclick="switchTab('tab-brand')">
+            <button class="nav-link active w-100" id="tab-trend-btn" onclick="switchTab('tab-trend')">
+                <i class="bi bi-graph-up-arrow me-2"></i>Trend 분석
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link w-100" id="tab-brand-btn" onclick="switchTab('tab-brand')">
                 <i class="bi bi-grid-fill me-2"></i>브랜드/상품 분석
             </button>
         </div>
@@ -218,7 +240,53 @@
 
   <div class="container">
     
-    <div id="tab-brand" class="fade-in">
+    <div id="tab-trend" class="fade-in">
+        <div class="row mb-4 g-3">
+            <div class="col-md-6 col-lg-3">
+                <div class="custom-card kpi-card">
+                    <div class="kpi-title">총 방송 횟수</div>
+                    <div class="kpi-value" id="kpiCount">0</div>
+                    <div class="kpi-sub">회</div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="custom-card kpi-card">
+                    <div class="kpi-title">총 가중분</div>
+                    <div class="kpi-value text-primary" id="kpiWeight">0</div>
+                    <div class="kpi-sub">분</div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="custom-card h-100">
+                     <h5 class="chart-card-title">MD 분류별 편성 비중 (가중분)</h5>
+                     <div class="chart-container" style="height: 140px;">
+                        <canvas id="chartMdShare"></canvas>
+                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="custom-card h-100">
+                    <h5 class="chart-card-title">Top 10 브랜드 (가중분 순)</h5>
+                    <div class="chart-container" style="height: 400px;">
+                        <canvas id="chartTopBrands"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="custom-card h-100">
+                    <h5 class="chart-card-title">Top 10 상품 (가중분 순)</h5>
+                    <div class="chart-container" style="height: 400px;">
+                        <canvas id="chartTopItems"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-brand" class="fade-in" style="display:none;">
       <div id="brandView" class="fade-in">
         <h5 class="mb-3 fw-bold text-dark"><i class="bi bi-trophy-fill text-warning me-2"></i>브랜드별 가중분 순위</h5>
         <div id="brandList"></div>
@@ -352,10 +420,17 @@
     const GITHUB_CSV_URL = "https://raw.githubusercontent.com/from237/ssg_tv/main/data.csv"; 
 
     let rawData = [];
-    let currentTab = 'brand'; 
-    let historySource = 'brand'; 
-    let currentSearchResults = []; 
+    let currentTab = 'trend'; // 기본 탭을 Trend로 변경
+    let historySource = 'trend'; 
+    let currentSearchResults = [];
     let brandTabFilteredData = [];
+    
+    // 차트 인스턴스 저장소
+    const chartInstances = {
+        mdShare: null,
+        topBrands: null,
+        topItems: null
+    };
 
     // CSV 파일 헤더 순서에 맞춘 인덱스
     const COL = {
@@ -367,6 +442,10 @@
 
     const FILTER_IDS = ['mdClass', 'itemClass1', 'itemClass2', 'itemClass3', 'itemClass4', 'itemClass5'];
     const FILTER_COLS = [COL.MD_CLS, COL.ITEM_CLS1, COL.ITEM_CLS2, COL.ITEM_CLS3, COL.ITEM_CLS4, COL.ITEM_CLS5];
+
+    // Chart.js Default Config
+    Chart.defaults.font.family = "'Pretendard', sans-serif";
+    Chart.defaults.color = '#2c3e50';
 
     window.onload = function() {
       fetchDataFromGitHub();
@@ -388,7 +467,7 @@
     function fetchDataFromGitHub() {
         Papa.parse(GITHUB_CSV_URL, {
             download: true,
-            header: false, // 배열로 받기 위해 false (헤더 포함)
+            header: false,
             skipEmptyLines: true,
             complete: function(results) {
                 try {
@@ -400,9 +479,13 @@
                     
                     loadInitialFilter(); 
                     updatePeriodOptions();
-                    initDailyTab(); // [수정] MD 필터 초기화 포함됨
+                    initDailyTab();
 
                     document.getElementById('loading').style.display = 'none';
+                    
+                    // 초기 화면 렌더링 (Trend 탭)
+                    renderTrendTab();
+
                 } catch (e) {
                     handleError(e);
                 }
@@ -418,6 +501,7 @@
       document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
       document.getElementById(tabId + '-btn').classList.add('active');
 
+      document.getElementById('tab-trend').style.display = 'none';
       document.getElementById('tab-brand').style.display = 'none';
       document.getElementById('tab-daily').style.display = 'none';
       document.getElementById('tab-search').style.display = 'none'; 
@@ -431,52 +515,150 @@
           document.getElementById('filterArea').style.display = 'block';
       }
 
-      if (currentTab === 'brand') {
+      if (currentTab === 'trend') {
+          renderTrendTab();
+      } else if (currentTab === 'brand') {
           const isHistoryMode = document.getElementById('historyView').style.display === 'block';
           if (isHistoryMode) document.getElementById('filterArea').style.display = 'none';
           else resetAndRender();
       }
     }
 
-    // [Helper] 채널 배지 생성
-    function getChannelBadge(ch) {
-        let color = 'bg-secondary'; // Default
-        if (ch === 'IPTV') color = 'bg-primary'; 
-        else if (ch === 'CATV') color = 'bg-success'; 
-        else if (ch === '전체') color = 'bg-dark';
+    // [Helper] 숫자 처리
+    const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
+
+    // ============================================================
+    // [Tab Trend Logic] 트렌드 분석
+    // ============================================================
+    function renderTrendTab() {
+        const data = getFilteredDataBasedOnDropdowns();
         
-        return `<span class="badge ${color} bg-opacity-75" style="font-size:0.75rem">${ch}</span>`;
+        // 1. KPI 계산
+        let totalCount = data.length;
+        let totalWeight = 0;
+        data.forEach(r => totalWeight += getNum(r[COL.WEIGHT]));
+
+        document.getElementById('kpiCount').innerText = totalCount.toLocaleString();
+        document.getElementById('kpiWeight').innerText = Math.round(totalWeight).toLocaleString();
+
+        if(data.length === 0) return; // 데이터 없으면 차트 그리지 않음
+
+        // 2. 데이터 집계
+        const mdStats = {};
+        const brandStats = {};
+        const itemStats = {};
+
+        data.forEach(r => {
+            const w = getNum(r[COL.WEIGHT]);
+            const md = r[COL.MD_CLS] || '미분류';
+            const brand = r[COL.BRAND] || '기타';
+            const item = r[COL.NAME] || '미상';
+
+            mdStats[md] = (mdStats[md] || 0) + w;
+            brandStats[brand] = (brandStats[brand] || 0) + w;
+            itemStats[item] = (itemStats[item] || 0) + w;
+        });
+
+        // 3. 차트 렌더링
+        updateMdChart(mdStats, totalWeight);
+        updateTopChart('chartTopBrands', brandStats, '브랜드', 10, chartInstances, 'topBrands');
+        updateTopChart('chartTopItems', itemStats, '상품', 10, chartInstances, 'topItems');
     }
 
-    // [Helper] 요일 텍스트 구하기
-    function getDayOfWeek(dateStr) {
-        const d = moment(dateStr);
-        if (!d.isValid()) return '';
-        const days = ['일', '월', '화', '수', '목', '금', '토'];
-        return days[d.day()];
+    function updateMdChart(stats, total) {
+        const ctx = document.getElementById('chartMdShare').getContext('2d');
+        if (chartInstances.mdShare) chartInstances.mdShare.destroy();
+
+        // 정렬
+        const labels = Object.keys(stats).sort((a,b) => stats[b] - stats[a]);
+        const values = labels.map(k => stats[k]);
+        
+        // 컬러 팔레트 생성
+        const colors = [
+            '#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', 
+            '#34495e', '#16a085', '#d35400', '#7f8c8d', '#c0392b'
+        ];
+
+        chartInstances.mdShare = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors.slice(0, labels.length),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                let value = context.parsed;
+                                let percentage = ((value / total) * 100).toFixed(1) + '%';
+                                return `${label}: ${Math.round(value).toLocaleString()}분 (${percentage})`;
+                            }
+                        }
+                    }
+                },
+                layout: { padding: 0 }
+            }
+        });
     }
 
-    // [Helper] 요일 배지 생성 (토:파랑, 일:빨강)
-    function getDayBadgeHTML(dateStr) {
-        const d = moment(dateStr);
-        if (!d.isValid()) return '';
-        const days = ['일', '월', '화', '수', '목', '금', '토'];
-        const dayIdx = d.day();
-        const dayChar = days[dayIdx];
+    function updateTopChart(canvasId, stats, labelName, topN, instanceObj, instanceKey) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        if (instanceObj[instanceKey]) instanceObj[instanceKey].destroy();
+
+        // Top N 추출
+        const sortedKeys = Object.keys(stats).sort((a,b) => stats[b] - stats[a]).slice(0, topN);
+        const values = sortedKeys.map(k => Math.round(stats[k]));
         
-        let badgeClass = 'bg-light text-dark border'; // Default (평일)
-        
-        if (dayIdx === 0) { // 일요일
-            badgeClass = 'bg-danger text-white border-danger';
-        } else if (dayIdx === 6) { // 토요일
-            badgeClass = 'bg-primary text-white border-primary';
-        }
-        
-        return `<span class="badge ${badgeClass}" style="min-width: 30px;">${dayChar}</span>`;
+        // 그라데이션 색상 (Top1 ~ Top N)
+        const bgColors = sortedKeys.map((_, i) => i < 3 ? 'rgba(52, 152, 219, 0.8)' : 'rgba(149, 165, 166, 0.5)');
+        const borderColors = sortedKeys.map((_, i) => i < 3 ? 'rgba(52, 152, 219, 1)' : 'rgba(149, 165, 166, 1)');
+
+        instanceObj[instanceKey] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: sortedKeys,
+                datasets: [{
+                    label: '가중분(분)',
+                    data: values,
+                    backgroundColor: bgColors,
+                    borderColor: borderColors,
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y', // 가로 막대 그래프
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                         callbacks: {
+                            label: function(context) {
+                                return ` ${context.parsed.x.toLocaleString()}분`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { font: { size: 10 } } },
+                    y: { grid: { display: false }, ticks: { font: { weight: 'bold' } } }
+                }
+            }
+        });
     }
 
     // ============================================================
-    // [UI] 멀티 셀렉트 Dropdown 관련
+    // [UI] 멀티 셀렉트 & 공통 필터 로직
     // ============================================================
     function toggleCheckList() {
         const list = document.getElementById('periodCheckList');
@@ -512,9 +694,6 @@
         return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
     }
 
-    // ============================================================
-    // [공통 필터 로직]
-    // ============================================================
     function getFilteredDataBasedOnDropdowns() {
       const type = document.getElementById('periodType').value;
       const selectedPeriods = getSelectedPeriodValues(); 
@@ -541,7 +720,8 @@
     }
 
     function onFilterChanged() {
-        if(currentTab === 'brand') resetAndRender();
+        if (currentTab === 'trend') renderTrendTab();
+        else if (currentTab === 'brand') resetAndRender();
     }
 
     function loadInitialFilter() {
@@ -601,8 +781,7 @@
         });
         
         let sortedList = Array.from(periodSet).map(JSON.parse);
-        if (type === 'week' || type === 'day') sortedList.sort((a, b) => b.val.localeCompare(a.val)); 
-        else sortedList.sort((a, b) => b.val.localeCompare(a.val)); 
+        sortedList.sort((a, b) => b.val.localeCompare(a.val)); 
         
         const ul = document.getElementById('periodCheckList');
         ul.innerHTML = '';
@@ -649,8 +828,37 @@
       } catch (e) { console.error(e); }
     }
 
+    // [Helper] 채널 배지 생성
+    function getChannelBadge(ch) {
+        let color = 'bg-secondary'; 
+        if (ch === 'IPTV') color = 'bg-primary'; 
+        else if (ch === 'CATV') color = 'bg-success'; 
+        else if (ch === '전체') color = 'bg-dark';
+        return `<span class="badge ${color} bg-opacity-75" style="font-size:0.75rem">${ch}</span>`;
+    }
+
+    // [Helper] 요일 배지 생성
+    function getDayBadgeHTML(dateStr) {
+        const d = moment(dateStr);
+        if (!d.isValid()) return '';
+        const days = ['일', '월', '화', '수', '목', '금', '토'];
+        const dayIdx = d.day();
+        const dayChar = days[dayIdx];
+        
+        let badgeClass = 'bg-light text-dark border'; 
+        if (dayIdx === 0) badgeClass = 'bg-danger text-white border-danger';
+        else if (dayIdx === 6) badgeClass = 'bg-primary text-white border-primary';
+        
+        return `<span class="badge ${badgeClass}" style="min-width: 30px;">${dayChar}</span>`;
+    }
+
+    function getDayOfWeek(dateStr) {
+        const d = moment(dateStr);
+        return d.isValid() ? ['일', '월', '화', '수', '목', '금', '토'][d.day()] : '';
+    }
+
     // ============================================================
-    // [Tab 1 Logic] 브랜드/상품
+    // [Tab Brand Logic] 브랜드/상품 (유지)
     // ============================================================
     function resetAndRender() {
       document.getElementById('brandView').style.display = 'block';
@@ -667,7 +875,6 @@
       container.innerHTML = '';
       if(brandTabFilteredData.length === 0) { container.innerHTML = `<div class="text-center p-5 text-muted bg-white border rounded">데이터가 없습니다.</div>`; return; }
 
-      const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
       const brandMap = {};
       brandTabFilteredData.forEach(r => {
         const brand = r[COL.BRAND] || '기타';
@@ -704,7 +911,6 @@
       const container = document.getElementById('itemGrid');
       container.innerHTML = '';
       const brandItems = brandTabFilteredData.filter(r => (r[COL.BRAND] || '기타') === brandName);
-      const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
       
       let totalCount = 0; let totalWeight = 0; 
       const itemMap = {};
@@ -755,10 +961,13 @@
     }
 
     function renderHistory(itemId) {
-      if(currentTab === 'daily' || currentTab === 'search') {
+      if(currentTab === 'daily' || currentTab === 'search' || currentTab === 'trend') {
+        document.getElementById('tab-trend').style.display = 'none';
         document.getElementById('tab-daily').style.display = 'none';
         document.getElementById('tab-search').style.display = 'none';
         document.getElementById('tab-brand').style.display = 'block';
+        
+        document.getElementById('tab-trend-btn').classList.remove('active');
         document.getElementById('tab-brand-btn').classList.add('active');
         document.getElementById('tab-daily-btn').classList.remove('active');
         document.getElementById('tab-search-btn').classList.remove('active');
@@ -781,7 +990,6 @@
 
       if(historyItems.length === 0) return;
       const info = historyItems[0];
-      const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
       
       document.getElementById('historyInfo').innerHTML = `
         <img src="${info[COL.IMAGE]}" class="rounded bg-white shadow-sm" style="width:80px;height:80px;object-fit:contain;border:1px solid #eee; padding:5px;" onerror="this.src='https://via.placeholder.com/100'">
@@ -814,18 +1022,11 @@
       document.getElementById('historyView').style.display = 'none';
       
       if (historySource === 'daily') {
-        document.getElementById('tab-brand').style.display = 'none';
-        document.getElementById('tab-daily').style.display = 'block';
-        document.getElementById('tab-brand-btn').classList.remove('active');
-        document.getElementById('tab-daily-btn').classList.add('active');
-        currentTab = 'daily';
+        switchTab('tab-daily');
       } else if (historySource === 'search') {
-        document.getElementById('tab-brand').style.display = 'none';
-        document.getElementById('tab-search').style.display = 'block';
-        document.getElementById('tab-brand-btn').classList.remove('active');
-        document.getElementById('tab-search-btn').classList.add('active');
-        currentTab = 'search';
-        document.getElementById('filterArea').style.display = 'block';
+        switchTab('tab-search');
+      } else if (historySource === 'trend') {
+        switchTab('tab-trend');
       } else {
         document.getElementById('itemView').style.display = 'block';
         document.getElementById('filterArea').style.display = 'block';
@@ -839,19 +1040,18 @@
     }
 
     // ============================================================
-    // [Tab 2 Logic] 일자별 편성표 (수정됨)
+    // [Tab Daily Logic] 일자별 편성표
     // ============================================================
     function initDailyTab() {
       const dateSet = new Set();
-      const mdSet = new Set(); // [추가] MD 분류 수집용
+      const mdSet = new Set();
 
       rawData.forEach(r => {
         const d = r[COL.DATE];
         if (d && moment(d).isValid()) dateSet.add(moment(d).format('YYYY-MM-DD'));
-        if (r[COL.MD_CLS]) mdSet.add(r[COL.MD_CLS]); // [추가]
+        if (r[COL.MD_CLS]) mdSet.add(r[COL.MD_CLS]); 
       });
 
-      // 1. 날짜 드롭다운 초기화
       const sortedDates = Array.from(dateSet).sort().reverse();
       const sel = document.getElementById('dailyDateSelect');
       sel.innerHTML = '<option value="">날짜를 선택하세요</option>';
@@ -866,7 +1066,6 @@
         sel.appendChild(opt);
       });
 
-      // 2. [추가] MD 분류 드롭다운 초기화
       const sortedMds = Array.from(mdSet).sort();
       const mdSel = document.getElementById('dailyMdSelect');
       mdSel.innerHTML = '<option value="ALL">전체</option>';
@@ -887,13 +1086,12 @@
       }
       if (closestDate) {
           sel.value = closestDate;
-          renderDailySchedule();
       }
     }
 
     function renderDailySchedule() {
       const selectedDate = document.getElementById('dailyDateSelect').value;
-      const selectedMd = document.getElementById('dailyMdSelect').value; // [추가]
+      const selectedMd = document.getElementById('dailyMdSelect').value; 
       const container = document.getElementById('dailyScheduleArea');
       
       if (!selectedDate) {
@@ -901,7 +1099,6 @@
         return;
       }
 
-      // [수정] 날짜 + MD 분류 필터링 동시 적용
       const dayItems = rawData.filter(r => {
         const d = r[COL.DATE];
         const matchDate = (d && moment(d).format('YYYY-MM-DD') === selectedDate);
@@ -921,14 +1118,10 @@
       });
 
       let html = '';
-      const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
-
       dayItems.forEach(item => {
         const time = item[COL.TIME] || '00:00';
         const price = getNum(item[COL.PRICE]).toLocaleString();
         const chBadge = getChannelBadge(item[COL.CHANNEL]);
-        
-        // [수정] MD 분류 표기 (채널과 브랜드 사이)
         const mdText = item[COL.MD_CLS] ? `<span class="badge bg-light text-dark border ms-1" style="font-size:0.75rem">${item[COL.MD_CLS]}</span>` : '';
 
         html += `
@@ -981,7 +1174,7 @@
     }
 
     // ============================================================
-    // [Tab 3 Logic] 검색 및 다운로드
+    // [Tab Search Logic] 검색 및 다운로드 (유지)
     // ============================================================
     function handleKeywordSearch() {
         const keyword = document.getElementById('searchInput').value.trim();
@@ -1012,8 +1205,6 @@
         container.style.display = 'block';
         
         let totalWeight = 0;
-        const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
-
         results.forEach(r => {
             totalWeight += getNum(r[COL.WEIGHT]);
         });
