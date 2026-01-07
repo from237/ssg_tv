@@ -2,26 +2,24 @@ import requests
 from bs4 import BeautifulSoup
 import csv
 import time
-import random
 from datetime import date, timedelta, datetime
 import urllib3
 from collections import Counter
 import os
 import pandas as pd
-import numpy as np
 
 # 보안 경고 끄기
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ==========================================
-# [설정] 파일 및 경로
+# [설정] 파일명 (GitHub Action과 통일)
 # ==========================================
-FILENAME = "data.csv"  # 깃허브 액션과 통일된 파일명
+FILENAME = "data.csv"
 WEIGHT_FOLDER = "weights"
 LOADED_WEIGHTS_MAP = {}
 
 # ==========================================
-# [설정] MD 분류 로직
+# [설정] MD 분류 및 카테고리 매핑
 # ==========================================
 PB_BRANDS = ["에디티드", "에디션S", "블루핏", "여유", "엘라코닉"]
 
@@ -99,45 +97,39 @@ def calc_duration_minutes(time_str):
     except: return 0
 
 # ==========================================
-# [핵심 로직] 날짜 자동 계산 함수
+# [핵심] 날짜 자동 계산 함수
 # ==========================================
 def get_date_range():
-    """
-    data.csv가 있으면 마지막 날짜 + 1일부터 오늘까지,
-    없으면 오늘 하루만 수집하도록 날짜를 반환
-    """
     today = date.today()
-    
+    # 기본값: 1월 5일부터 (만약 파일이 없거나 읽기 실패하면 이 날짜부터 시작)
+    start_date = date(2026, 1, 5) 
+
     if os.path.exists(FILENAME):
         try:
-            # CSV 읽어서 마지막 날짜 확인
+            print(f"📂 {FILENAME} 읽는 중...")
             df = pd.read_csv(FILENAME, encoding='utf-8-sig')
             if not df.empty and '방송일자' in df.columns:
-                last_date_str = df['방송일자'].max() # 가장 최근 날짜 찾기
+                last_date_str = df['방송일자'].max() # 가장 마지막 날짜 (예: 2026-01-04)
                 last_date = datetime.strptime(last_date_str, "%Y-%m-%d").date()
                 
-                # 마지막 날짜가 오늘보다 과거라면, 그 다음날부터 수집 시작
+                # 마지막 데이터가 오늘보다 이전이면, 그 다음날부터 수집
                 if last_date < today:
                     start_date = last_date + timedelta(days=1)
-                    print(f"🔄 기존 데이터 확인: {last_date}까지 있음. -> {start_date}부터 수집 시작")
-                    return start_date, today
+                    print(f"🔄 마지막 데이터: {last_date} -> {start_date}부터 수집 시작")
+                else:
+                    start_date = today # 이미 최신이면 오늘것만
+                    print("✅ 이미 최신 데이터까지 있습니다. 오늘 날짜만 확인합니다.")
         except Exception as e:
-            print(f"⚠️ 파일 읽기 실패 (새로 시작): {e}")
+            print(f"⚠️ 파일 읽기 실패 (기본값 1월 5일로 시작): {e}")
 
-    # 파일이 없거나 문제 있으면 오늘 날짜만 수행 (또는 원하는 과거 날짜로 하드코딩 가능)
-    # 초기 1월 5일 세팅이 필요하다면 아래 줄 주석 해제하여 1회성 사용 가능
-    # return date(2026, 1, 5), today 
-    
-    print("🆕 기존 데이터 없음 또는 최신 상태. 오늘 날짜 수집.")
-    return today, today
+    return start_date, today
 
 def run():
     start_date, end_date = get_date_range()
-    
-    print(f"🚀 수집 구간: {start_date} ~ {end_date}")
+    print(f"🚀 수집 시작: {start_date} ~ {end_date}")
 
-    # 파일이 아예 없으면 헤더 쓰기, 있으면 헤더 건너뛰고 이어쓰기('a')
     file_exists = os.path.exists(FILENAME)
+    # 파일이 있으면 'a'(추가), 없으면 'w'(새로쓰기)
     mode = 'a' if file_exists else 'w'
     
     headers = [
@@ -148,11 +140,10 @@ def run():
         "MD분류"
     ]
 
-    # 파일 열기 (추가 모드)
     with open(FILENAME, mode, newline='', encoding='utf-8-sig') as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(headers) # 파일 새로 만들 때만 헤더 작성
+            writer.writerow(headers) # 헤더는 파일 처음 만들때만
 
         session = requests.Session()
         session.headers.update({"User-Agent": "Mozilla/5.0", "X-Requested-With": "XMLHttpRequest"})
@@ -163,7 +154,7 @@ def run():
             target_date = start_date + timedelta(days=i)
             p_date = target_date.strftime("%Y/%m/%d")
             s_date = target_date.strftime("%Y-%m-%d")
-            print(f"[{i + 1}/{delta + 1}] 📅 {s_date} 진행 중...", end="")
+            print(f"[{i + 1}/{delta + 1}] 📅 {s_date}...", end="")
 
             try:
                 url = "https://www.shinsegaetvshopping.com/broadcast/tvschedule-ajax"
@@ -187,7 +178,7 @@ def run():
                             seen = t_seen.get(bt, 0)
                             ch = "IPTV" if seen == 0 else "CATV"
                             t_seen[bt] = seen + 1
-
+                        
                         sm = calc_duration_minutes(bt)
                         wm = calc_final_weighted_mins(target_date, bt, sm, ch)
 
@@ -220,18 +211,18 @@ def run():
                             except: continue
 
                     if day_data:
-                        writer.writerows(day_data) # 데이터 즉시 쓰기
+                        writer.writerows(day_data)
                         print(f" ✅ {len(day_data)}건 저장")
                     else:
                         print(f" ⚠️ 데이터 없음")
                 else:
                     print(f" ⚠️ 방송 정보 없음")
                 
-                time.sleep(1) # 서버 부하 방지
+                time.sleep(1)
             except Exception as e:
                 print(f" ❌ 에러: {e}")
 
-    print(f"\n🎉 완료! ({FILENAME} 업데이트 됨)")
+    print(f"\n🎉 완료! ({FILENAME}에 업데이트 됨)")
 
 if __name__ == "__main__":
     run()
