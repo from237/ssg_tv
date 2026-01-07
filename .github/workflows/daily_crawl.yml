@@ -1,0 +1,49 @@
+name: Daily Broadcast Collector
+
+on:
+  schedule:
+    # UTC 21:00 = 한국 시간(KST) 다음 날 오전 06:00
+    # 매일 아침 6시에 자동으로 실행됩니다.
+    - cron: '0 21 * * *'
+  
+  # GitHub 웹사이트에서 'Run workflow' 버튼으로 수동 실행 가능하게 함
+  workflow_dispatch:
+
+# 깃허브 봇이 저장소에 파일을 쓸(Write) 수 있는 권한 부여
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. 저장소의 코드를 내려받습니다.
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. 파이썬 환경을 설정합니다. (3.9 버전)
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    # 3. requirements.txt에 있는 라이브러리(pandas, requests 등)를 설치합니다.
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    # 4. 크롤러 코드를 실행합니다. (data.csv가 갱신됨)
+    - name: Run Crawler
+      run: python main.py
+
+    # 5. 변경된 data.csv를 깃허브 저장소에 커밋하고 푸시합니다.
+    - name: Commit and Push changes
+      run: |
+        git config --global user.name "GitHub Action"
+        git config --global user.email "action@github.com"
+        git add data.csv
+        # 변경사항이 있으면 커밋하고, 없으면 에러 없이 종료(exit 0)
+        git commit -m "Auto-update data.csv: $(date +'%Y-%m-%d')" || exit 0
+        git push
