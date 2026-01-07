@@ -152,7 +152,7 @@
 
   <div id="loading" class="spinner-overlay">
     <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-    <div class="mt-3 fw-bold text-secondary">데이터 분석 중...</div>
+    <div class="mt-3 fw-bold text-secondary">데이터 통합 분석 중...</div>
   </div>
 
   <header class="dashboard-header">
@@ -399,8 +399,10 @@
   </div>
 
   <script>
-    // [중요] 깃허브 Raw 데이터 주소
-    const GITHUB_CSV_URL = "https://raw.githubusercontent.com/from237/ssg_tv/main/data.csv"; 
+    // [설정] 깃허브 데이터 베이스 경로 및 연도 설정
+    const GITHUB_BASE_URL = "https://raw.githubusercontent.com/from237/ssg_tv/main/"; 
+    const START_YEAR = 2022;
+    const END_YEAR = 2026; 
 
     // MD 분류 고정 색상 맵
     const MD_COLOR_MAP = {
@@ -429,10 +431,10 @@
     };
 
     const COL = {
-      DATE: 0, TIME: 1, CHANNEL: 2, SIMPLE_MIN: 3, WEIGHT: 4,
-      ITEM_CLS1: 5, ITEM_CLS2: 6, ITEM_CLS3: 7, ITEM_CLS4: 8, ITEM_CLS5: 9,
-      BRAND: 10, NAME: 11, PRICE: 12, DISC_PRICE: 13, PROMOTION: 14,
-      ITEM_ID: 15, IMAGE: 16, LINK: 17, MD_CLS: 18
+        DATE: 0, TIME: 1, CHANNEL: 2, SIMPLE_MIN: 3, WEIGHT: 4,
+        ITEM_CLS1: 5, ITEM_CLS2: 6, ITEM_CLS3: 7, ITEM_CLS4: 8, ITEM_CLS5: 9,
+        BRAND: 10, NAME: 11, PRICE: 12, DISC_PRICE: 13, PROMOTION: 14,
+        ITEM_ID: 15, IMAGE: 16, LINK: 17, MD_CLS: 18
     };
 
     const FILTER_IDS = ['mdClass', 'itemClass1', 'itemClass2', 'itemClass3', 'itemClass4', 'itemClass5'];
@@ -442,43 +444,76 @@
     Chart.defaults.color = '#2c3e50';
 
     window.onload = function() {
-      fetchDataFromGitHub();
-      document.addEventListener('click', function(e) {
-          const wrapper = document.getElementById('multiSelectWrapper');
-          if (wrapper && !wrapper.contains(e.target)) {
-              document.getElementById('periodCheckList').classList.remove('visible');
-          }
-      });
+        fetchDataFromGitHub();
+        document.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('multiSelectWrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                document.getElementById('periodCheckList').classList.remove('visible');
+            }
+        });
     };
 
     function handleError(error) {
-      document.getElementById('loading').style.display = 'none';
-      alert("데이터 로딩 실패: " + error.message);
+        document.getElementById('loading').style.display = 'none';
+        alert("데이터 로딩 실패: " + error.message);
     }
 
-    function fetchDataFromGitHub() {
-        Papa.parse(GITHUB_CSV_URL, {
-            download: true,
-            header: false,
-            skipEmptyLines: true,
-            complete: function(results) {
-                try {
-                    const data = results.data;
-                    if (!data || data.length < 2) throw new Error("데이터가 없습니다.");
-                    rawData = data.slice(1);
-                    loadInitialFilter(); 
-                    updatePeriodOptions();
-                    initDailyTab();
-                    document.getElementById('loading').style.display = 'none';
-                    renderTrendTab();
-                } catch (e) {
-                    handleError(e);
-                }
-            },
-            error: function(err) {
-                handleError(err);
-            }
-        });
+    // [핵심 변경] 연도별 파일 병렬 로딩 및 통합
+    async function fetchDataFromGitHub() {
+        const promises = [];
+
+        // START_YEAR 부터 END_YEAR 까지 반복하며 Promise 생성
+        for (let year = START_YEAR; year <= END_YEAR; year++) {
+            const url = `${GITHUB_BASE_URL}${year}data.csv`;
+            
+            const p = new Promise((resolve) => {
+                Papa.parse(url, {
+                    download: true,
+                    header: false,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        // 성공 시 데이터 반환 (없으면 빈 배열)
+                        if(results.data && results.data.length > 0) {
+                            // 각 파일의 0번째 행은 헤더이므로 제거하고 반환
+                            resolve(results.data.slice(1)); 
+                        } else {
+                            resolve([]);
+                        }
+                    },
+                    error: function(err) {
+                        // 파일이 없거나 에러나도 전체 로직이 안 깨지게 빈 배열 반환
+                        console.warn(`Year ${year} load failed or empty:`, err);
+                        resolve([]); 
+                    }
+                });
+            });
+            promises.push(p);
+        }
+
+        try {
+            // 모든 파일 로딩 기다림
+            const results = await Promise.all(promises);
+            
+            // 데이터 하나로 합치기
+            rawData = [];
+            results.forEach(yearData => {
+                rawData = rawData.concat(yearData);
+            });
+
+            if (rawData.length === 0) throw new Error("로드된 데이터가 없습니다.");
+
+            console.log(`총 ${rawData.length}건 데이터 로드 완료`);
+
+            // 기존 로직 수행
+            loadInitialFilter(); 
+            updatePeriodOptions();
+            initDailyTab();
+            document.getElementById('loading').style.display = 'none';
+            renderTrendTab();
+
+        } catch (e) {
+            handleError(e);
+        }
     }
 
     function switchTab(tabId) {
@@ -575,7 +610,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 layout: {
-                    padding: { right: 50 } // 레이블 공간 확보
+                    padding: { right: 50 } 
                 },
                 plugins: {
                     legend: { display: false },
@@ -636,7 +671,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 layout: {
-                    padding: { right: 80 } // 레이블이 잘리지 않도록 오른쪽 여백 추가
+                    padding: { right: 80 } 
                 },
                 plugins: {
                     legend: { display: false },
@@ -648,14 +683,13 @@
                         }
                     },
                     datalabels: { 
-                        display: true, // 레이블 표시 활성화
-                        anchor: 'end', // 막대 끝 기준
-                        align: 'end',  // 막대 바깥쪽
-                        offset: 4,     // 간격
+                        display: true, 
+                        anchor: 'end', 
+                        align: 'end',  
+                        offset: 4,     
                         color: '#333',
                         font: { weight: 'bold', size: 11 },
                         formatter: function(value, context) {
-                            // "500분 (N%)" 형식, N은 INT
                             const percent = Math.round((value / total) * 100);
                             return `${value.toLocaleString()}분 (${percent}%)`;
                         }
@@ -1094,7 +1128,7 @@
       }
       if (closestDate) {
           sel.value = closestDate;
-          renderDailySchedule(); // [추가] 초기화 시 바로 최신 날짜로 렌더링
+          renderDailySchedule(); 
       }
     }
 
