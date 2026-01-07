@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>S사 방송상품 운영요약</title>
+  <title> S사 방송상품 운영요약</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -155,7 +155,7 @@
     <div class="container">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h3 class="header-title mb-1"><i class="bi bi-bar-chart-line-fill text-info me-2"></i>S사 방송상품 운영현황</h3>
+            <h3 class="header-title mb-1"><i class="bi bi-bar-chart-line-fill text-info me-2"></i> S사 방송상품 운영현황</h3>
         </div>
       </div>
     </div>
@@ -257,7 +257,7 @@
           <table class="table history-table table-hover mb-0">
             <thead>
               <tr>
-                <th width="15%">방송일자</th><th width="10%">시간</th><th>상품명</th><th width="12%" class="text-end">판매가</th><th width="12%" class="text-end">가중분</th><th width="20%">프로모션/비고</th>
+                <th width="15%">방송일자</th><th width="10%">시간</th><th width="8%">채널</th><th>상품명</th><th width="12%" class="text-end">판매가</th><th width="12%" class="text-end">가중분</th><th width="15%">프로모션/비고</th>
               </tr>
             </thead>
             <tbody id="historyTableBody"></tbody>
@@ -319,6 +319,7 @@
                        <tr>
                            <th width="12%">방송일자</th>
                            <th width="8%">시간</th>
+                           <th width="8%">채널</th>
                            <th width="12%">브랜드</th>
                            <th>상품명</th>
                            <th width="10%" class="text-end">판매가</th>
@@ -336,7 +337,6 @@
 
   <script>
     // [중요] 깃허브 Raw 데이터 주소 (자신의 저장소 주소로 변경 필요!)
-    // 예: https://raw.githubusercontent.com/사용자명/저장소명/main/data.csv
     const GITHUB_CSV_URL = "https://raw.githubusercontent.com/from237/ssg_tv/main/data.csv"; 
 
     let rawData = [];
@@ -345,8 +345,7 @@
     let currentSearchResults = []; 
     let brandTabFilteredData = [];
 
-    // CSV 파일 헤더 순서에 맞춘 인덱스 (data.csv와 일치해야 함)
-    // 방송일자,방송시간,채널구분,단순분,가중분,아이템분류1,아이템분류2,아이템분류3,아이템분류4,아이템분류5,브랜드,상품명,판매가,할인가,프로모션,상품ID,이미지URL,상세링크,MD분류
+    // CSV 파일 헤더 순서에 맞춘 인덱스
     const COL = {
       DATE: 0, TIME: 1, CHANNEL: 2, SIMPLE_MIN: 3, WEIGHT: 4,
       ITEM_CLS1: 5, ITEM_CLS2: 6, ITEM_CLS3: 7, ITEM_CLS4: 8, ITEM_CLS5: 9,
@@ -355,7 +354,6 @@
     };
 
     const FILTER_IDS = ['mdClass', 'itemClass1', 'itemClass2', 'itemClass3', 'itemClass4', 'itemClass5'];
-    // 필터와 매핑될 컬럼 인덱스
     const FILTER_COLS = [COL.MD_CLS, COL.ITEM_CLS1, COL.ITEM_CLS2, COL.ITEM_CLS3, COL.ITEM_CLS4, COL.ITEM_CLS5];
 
     window.onload = function() {
@@ -375,7 +373,6 @@
       alert("데이터 로딩 실패: " + error.message);
     }
 
-    // [변경] GitHub CSV 가져오기
     function fetchDataFromGitHub() {
         Papa.parse(GITHUB_CSV_URL, {
             download: true,
@@ -416,19 +413,27 @@
       
       currentTab = tabId.replace('tab-', '');
 
-      // 필터 영역 표시/숨김 관리 (Daily 탭에서는 숨김)
       if (currentTab === 'daily') {
           document.getElementById('filterArea').style.display = 'none';
       } else {
           document.getElementById('filterArea').style.display = 'block';
       }
 
-      // 브랜드 탭으로 돌아왔을 때 필터 적용 상태 유지
       if (currentTab === 'brand') {
           const isHistoryMode = document.getElementById('historyView').style.display === 'block';
           if (isHistoryMode) document.getElementById('filterArea').style.display = 'none';
           else resetAndRender();
       }
+    }
+
+    // [Helper] 채널 배지 생성
+    function getChannelBadge(ch) {
+        let color = 'bg-secondary'; // Default
+        if (ch === 'IPTV') color = 'bg-primary'; 
+        else if (ch === 'CATV') color = 'bg-success'; 
+        else if (ch === '전체') color = 'bg-dark';
+        
+        return `<span class="badge ${color} bg-opacity-75" style="font-size:0.75rem">${ch}</span>`;
     }
 
     // ============================================================
@@ -440,14 +445,12 @@
         else list.classList.add('visible');
     }
 
-    // 체크박스 상태 변경 시 실행
     function updateSelectedText() {
         const checkboxes = document.querySelectorAll('#periodCheckList input[type="checkbox"]:not(#chk_all)');
         const checked = Array.from(checkboxes).filter(cb => cb.checked);
         const anchor = document.getElementById('multiSelectAnchor');
         const chkAll = document.getElementById('chk_all');
         
-        // 전체 선택 상태 동기화
         if (chkAll) {
              chkAll.checked = (checked.length === checkboxes.length && checkboxes.length > 0);
         }
@@ -471,17 +474,16 @@
     }
 
     // ============================================================
-    // [공통 필터 로직] - 브랜드 탭과 검색 탭에서 공통 사용
+    // [공통 필터 로직]
     // ============================================================
     function getFilteredDataBasedOnDropdowns() {
       const type = document.getElementById('periodType').value;
-      const selectedPeriods = getSelectedPeriodValues(); // 다중 선택 값 가져오기
+      const selectedPeriods = getSelectedPeriodValues(); 
       const filters = FILTER_IDS.map(id => document.getElementById(id).value);
 
       if (selectedPeriods.length === 0) return [];
 
       return rawData.filter(r => {
-        // 1. 기간 필터 (다중 선택 포함)
         const d = r[COL.DATE]; if(!d) return false;
         const m = moment(d); if(!m.isValid()) return false;
         let k = '';
@@ -490,9 +492,8 @@
         else if(type === 'week') { const startOfWeek = m.startOf('isoWeek').format('YYYY-MM-DD'); const weekNum = m.isoWeek(); k = `${startOfWeek} (${weekNum}주차)`; }
         else if(type === 'day') k = m.format('YYYY-MM-DD');
         
-        if(!selectedPeriods.includes(k)) return false; // 선택된 리스트에 포함되지 않으면 제외
+        if(!selectedPeriods.includes(k)) return false; 
 
-        // 2. 카테고리 필터
         for(let i=0; i<filters.length; i++) { 
             if(filters[i] !== 'ALL' && r[FILTER_COLS[i]] !== filters[i]) return false; 
         }
@@ -502,7 +503,6 @@
 
     function onFilterChanged() {
         if(currentTab === 'brand') resetAndRender();
-        // 검색 탭에서는 검색 버튼 클릭 시 필터가 반영되므로 자동 실행 안함
     }
 
     function loadInitialFilter() {
@@ -546,7 +546,6 @@
       });
     }
 
-    // 기간 옵션 생성 (체크박스 리스트 형태로 변경 + 전체 선택 기능)
     function updatePeriodOptions() {
       try {
         const type = document.getElementById('periodType').value;
@@ -563,15 +562,12 @@
         });
         
         let sortedList = Array.from(periodSet).map(JSON.parse);
-        // 내림차순 정렬 (최신이 위로)
         if (type === 'week' || type === 'day') sortedList.sort((a, b) => b.val.localeCompare(a.val)); 
         else sortedList.sort((a, b) => b.val.localeCompare(a.val)); 
         
-        // 체크박스 리스트 생성
         const ul = document.getElementById('periodCheckList');
         ul.innerHTML = '';
 
-        // [전체 선택] 항목 추가
         const liAll = document.createElement('li');
         liAll.style.cssText = 'border-bottom: 1px solid #eee; margin-bottom: 5px; padding-bottom: 5px; font-weight: 700;';
         
@@ -579,7 +575,6 @@
         chkAll.type = 'checkbox';
         chkAll.id = 'chk_all';
         chkAll.value = 'ALL';
-        // "전체 선택" 클릭 이벤트
         chkAll.addEventListener('change', function() {
             const allBoxes = document.querySelectorAll('#periodCheckList input[type="checkbox"]:not(#chk_all)');
             allBoxes.forEach(cb => cb.checked = chkAll.checked);
@@ -594,30 +589,22 @@
         liAll.appendChild(labelAll);
         ul.appendChild(liAll);
 
-        // 개별 항목 추가
         sortedList.forEach((obj, index) => { 
             const li = document.createElement('li');
-            
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.value = obj.key;
             checkbox.id = 'chk_' + index;
-            
-            // 기본값: 가장 최신 1개만 선택 (전체 로딩 방지)
             if(index === 0) checkbox.checked = true; 
-            
             checkbox.addEventListener('change', updateSelectedText);
-
             const label = document.createElement('label');
             label.htmlFor = 'chk_' + index;
             label.innerText = obj.key;
-
             li.appendChild(checkbox);
             li.appendChild(label);
             ul.appendChild(li);
         });
 
-        // 텍스트 업데이트 및 필터 적용
         updateSelectedText();
 
       } catch (e) { console.error(e); }
@@ -632,7 +619,6 @@
       document.getElementById('historyView').style.display = 'none';
       document.getElementById('filterArea').style.display = 'block';
       
-      // 공통 필터 함수 사용
       brandTabFilteredData = getFilteredDataBasedOnDropdowns();
       renderBrandList();
     }
@@ -773,6 +759,7 @@
           <tr>
             <td><span class="fw-bold text-dark">${row[COL.DATE]}</span></td>
             <td>${row[COL.TIME] || '-'}</td>
+            <td>${getChannelBadge(row[COL.CHANNEL])}</td>
             <td>${row[COL.NAME]}</td>
             <td class="text-end fw-bold">${getNum(row[COL.PRICE]).toLocaleString()}원</td>
             <td class="text-end text-primary fw-bold">${getNum(row[COL.WEIGHT]).toLocaleString()}분</td>
@@ -874,6 +861,7 @@
       dayItems.forEach(item => {
         const time = item[COL.TIME] || '00:00';
         const price = getNum(item[COL.PRICE]).toLocaleString();
+        const chBadge = getChannelBadge(item[COL.CHANNEL]);
         
         html += `
           <div class="timeline-item fade-in">
@@ -888,7 +876,10 @@
               </div>
               <div class="sc-info-box">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                   <span class="badge bg-secondary bg-opacity-10 text-secondary category-badge">${item[COL.BRAND]}</span>
+                   <div>
+                       ${chBadge}
+                       <span class="badge bg-secondary bg-opacity-10 text-secondary category-badge ms-1">${item[COL.BRAND]}</span>
+                   </div>
                    <span class="fw-bold text-primary small">${item[COL.WEIGHT]}분</span>
                 </div>
                 <h5 class="fw-bold mb-2 text-dark text-truncate fs-6" style="max-width: 100%;" title="${item[COL.NAME]}">${item[COL.NAME]}</h5>
@@ -969,6 +960,7 @@
                 <tr>
                     <td>${row[COL.DATE]}</td>
                     <td>${row[COL.TIME] || '-'}</td>
+                    <td>${getChannelBadge(row[COL.CHANNEL])}</td>
                     <td class="fw-bold text-secondary">${row[COL.BRAND]}</td>
                     <td class="text-start">
                          <div class="text-truncate-2" title="${row[COL.NAME]}">${row[COL.NAME]}</div>
@@ -994,12 +986,13 @@
         }
 
         let csvContent = "\uFEFF"; 
-        csvContent += "방송일자,시간,브랜드,상품명,판매가,가중분,프로모션,링크\n";
+        csvContent += "방송일자,시간,채널,브랜드,상품명,판매가,가중분,프로모션,링크\n";
 
         currentSearchResults.forEach(row => {
             const rowStr = [
                 `"${row[COL.DATE]}"`,
                 `"${row[COL.TIME] || ''}"`,
+                `"${row[COL.CHANNEL] || '전체'}"`,
                 `"${row[COL.BRAND].replace(/"/g, '""')}"`,
                 `"${row[COL.NAME].replace(/"/g, '""')}"`,
                 `"${row[COL.PRICE]}"`,
