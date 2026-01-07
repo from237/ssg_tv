@@ -11,10 +11,10 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/ko.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 
   <style>
-    /* 기존 스타일 유지 */
     :root {
       --primary-color: #34495e;
       --accent-color: #3498db; 
@@ -37,8 +37,7 @@
       box-shadow: 0 4px 20px rgba(30, 60, 114, 0.2);
     }
     .header-title { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .header-subtitle { color: rgba(255, 255, 255, 0.8); font-size: 0.9rem; font-weight: 400; background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; }
-
+    
     .nav-pills { background: #e9ecef; padding: 5px; border-radius: 50px; display: inline-flex; width: 100%; margin-bottom: 20px; }
     .nav-item { flex: 1; text-align: center; }
     .nav-link { border-radius: 50px; color: #7f8c8d; font-weight: 600; padding: 10px 15px; transition: all 0.3s ease; font-size: 0.95rem; }
@@ -250,7 +249,14 @@
           <table class="table history-table table-hover mb-0">
             <thead>
               <tr>
-                <th width="15%">방송일자</th><th width="10%">시간</th><th width="8%">채널</th><th>상품명</th><th width="12%" class="text-end">판매가</th><th width="12%" class="text-end">가중분</th><th width="15%">프로모션/비고</th>
+                <th width="12%">방송일자</th>
+                <th width="5%" class="text-center">요일</th>
+                <th width="10%">시간</th>
+                <th width="8%">채널</th>
+                <th>상품명</th>
+                <th width="12%" class="text-end">판매가</th>
+                <th width="12%" class="text-end">가중분</th>
+                <th width="15%">프로모션/비고</th>
               </tr>
             </thead>
             <tbody id="historyTableBody"></tbody>
@@ -311,6 +317,7 @@
                    <thead>
                        <tr>
                            <th width="12%">방송일자</th>
+                           <th width="5%" class="text-center">요일</th>
                            <th width="8%">시간</th>
                            <th width="8%">채널</th>
                            <th width="12%">브랜드</th>
@@ -427,6 +434,14 @@
         else if (ch === '전체') color = 'bg-dark';
         
         return `<span class="badge ${color} bg-opacity-75" style="font-size:0.75rem">${ch}</span>`;
+    }
+
+    // [Helper] 요일 계산 함수 (날짜 문자열 -> 요일)
+    function getDayOfWeek(dateStr) {
+        const d = moment(dateStr);
+        if (!d.isValid()) return '';
+        const days = ['일', '월', '화', '수', '목', '금', '토'];
+        return days[d.day()];
     }
 
     // ============================================================
@@ -727,9 +742,11 @@
 
       const historyItems = rawData.filter(r => r[COL.ITEM_ID] === itemId);
       historyItems.sort((a, b) => {
-         const dA = new Date(a[COL.DATE] + ' ' + (a[COL.TIME]||''));
-         const dB = new Date(b[COL.DATE] + ' ' + (b[COL.TIME]||''));
-         return dB - dA;
+         const dA = a[COL.DATE] + ' ' + (a[COL.TIME] || '00:00');
+         const dB = b[COL.DATE] + ' ' + (b[COL.TIME] || '00:00');
+         if (dB > dA) return 1;
+         if (dB < dA) return -1;
+         return 0;
       });
 
       if(historyItems.length === 0) return;
@@ -748,9 +765,11 @@
       const tbody = document.getElementById('historyTableBody');
       tbody.innerHTML = '';
       historyItems.forEach(row => {
+        const dayOfWeek = getDayOfWeek(row[COL.DATE]);
         const tr = `
           <tr>
             <td><span class="fw-bold text-dark">${row[COL.DATE]}</span></td>
+            <td class="text-center"><span class="badge bg-light text-dark border">${dayOfWeek}</span></td>
             <td>${row[COL.TIME] || '-'}</td>
             <td>${getChannelBadge(row[COL.CHANNEL])}</td>
             <td>${row[COL.NAME]}</td>
@@ -804,7 +823,11 @@
       const sel = document.getElementById('dailyDateSelect');
       sel.innerHTML = '<option value="">날짜를 선택하세요</option>';
       sortedDates.forEach(dateStr => {
-        const opt = document.createElement('option'); opt.value = dateStr; opt.text = dateStr; sel.appendChild(opt);
+        const day = getDayOfWeek(dateStr);
+        const opt = document.createElement('option'); 
+        opt.value = dateStr; 
+        opt.text = `${dateStr} (${day})`; 
+        sel.appendChild(opt);
       });
 
       const today = moment().format('YYYY-MM-DD');
@@ -955,9 +978,11 @@
 
         let html = '';
         results.forEach(row => {
+            const dayOfWeek = getDayOfWeek(row[COL.DATE]);
             html += `
                 <tr>
                     <td>${row[COL.DATE]}</td>
+                    <td class="text-center"><span class="badge bg-light text-dark border">${dayOfWeek}</span></td>
                     <td>${row[COL.TIME] || '-'}</td>
                     <td>${getChannelBadge(row[COL.CHANNEL])}</td>
                     <td class="fw-bold text-secondary">${row[COL.BRAND]}</td>
@@ -985,17 +1010,19 @@
         }
 
         let csvContent = "\uFEFF"; 
-        csvContent += "방송일자,시간,채널,브랜드,상품명,판매가,가중분,프로모션,링크\n";
+        csvContent += "방송일자,요일,시간,채널,브랜드,상품명,판매가,가중분,프로모션,링크\n";
 
         currentSearchResults.forEach(row => {
+            const dayOfWeek = getDayOfWeek(row[COL.DATE]);
             const rowStr = [
                 `"${row[COL.DATE]}"`,
+                `"${dayOfWeek}"`,
                 `"${row[COL.TIME] || ''}"`,
                 `"${row[COL.CHANNEL] || '전체'}"`,
                 `"${row[COL.BRAND].replace(/"/g, '""')}"`,
                 `"${row[COL.NAME].replace(/"/g, '""')}"`,
                 `"${row[COL.PRICE]}"`,
-                `"${row[COL.WEIGHT]}"`,
+                `"${Math.round(row[COL.WEIGHT])}"`,
                 `"${(row[COL.PROMOTION] || '').replace(/"/g, '""')}"`,
                 `"${(row[COL.LINK] || '')}"`
             ].join(",");
