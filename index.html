@@ -238,8 +238,20 @@
     
     <div id="tab-trend" class="fade-in">
         
-        <div class="row mb-4">
-             <div class="col-12">
+        <div class="row mb-4 g-4">
+            <div class="col-lg-6">
+                <div class="custom-card h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="chart-card-title mb-0" style="border-left-color: #e67e22;">최근 3주 편성 트렌드 (Top 3)</h5>
+                        <span class="badge bg-light text-secondary border">필터 미적용</span>
+                    </div>
+                    <div class="chart-container" style="height: 350px;">
+                        <canvas id="chartRecentWeeks"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
                 <div class="custom-card h-100">
                       <h5 class="chart-card-title" id="titleMdShare">MD 분류별 편성 비중 (가중분)</h5>
                       <div class="chart-container" style="height: 350px;">
@@ -427,7 +439,8 @@
     const chartInstances = {
         mdShare: null,
         topBrands: null,
-        topItems: null
+        topItems: null,
+        recentTrend: null // [추가] 신규 차트용 인스턴스
     };
 
     const COL = {
@@ -458,7 +471,6 @@
         alert("데이터 로딩 실패: " + error.message);
     }
 
-    // [핵심 변경] 연도별 파일 병렬 로딩 및 통합
     async function fetchDataFromGitHub() {
         const promises = [];
 
@@ -472,16 +484,13 @@
                     header: false,
                     skipEmptyLines: true,
                     complete: function(results) {
-                        // 성공 시 데이터 반환 (없으면 빈 배열)
                         if(results.data && results.data.length > 0) {
-                            // 각 파일의 0번째 행은 헤더이므로 제거하고 반환
                             resolve(results.data.slice(1)); 
                         } else {
                             resolve([]);
                         }
                     },
                     error: function(err) {
-                        // 파일이 없거나 에러나도 전체 로직이 안 깨지게 빈 배열 반환
                         console.warn(`Year ${year} load failed or empty:`, err);
                         resolve([]); 
                     }
@@ -491,10 +500,8 @@
         }
 
         try {
-            // 모든 파일 로딩 기다림
             const results = await Promise.all(promises);
             
-            // 데이터 하나로 합치기
             rawData = [];
             results.forEach(yearData => {
                 rawData = rawData.concat(yearData);
@@ -504,7 +511,6 @@
 
             console.log(`총 ${rawData.length}건 데이터 로드 완료`);
 
-            // 기존 로직 수행
             loadInitialFilter(); 
             updatePeriodOptions();
             initDailyTab();
@@ -549,6 +555,9 @@
     // [Tab Trend Logic] 트렌드 분석
     // ============================================================
     function renderTrendTab() {
+        // [추가] 신규 차트 먼저 그리기
+        renderRecentTrendChart();
+
         const data = getFilteredDataBasedOnDropdowns();
         
         let totalCount = data.length;
@@ -583,6 +592,138 @@
         updateMdChart(mdStats, totalWeight);
         updateTopChart('chartTopBrands', brandStats, 10, chartInstances, 'topBrands', totalWeight);
         updateTopChart('chartTopItems', itemStats, 10, chartInstances, 'topItems', totalWeight);
+    }
+
+    // [신규] 최근 3주 트렌드 차트 함수 (Top 3 표시)
+    function renderRecentTrendChart() {
+        if (!rawData || rawData.length === 0) return;
+
+        // 1. 전체 데이터에서 가장 최근 날짜 찾기
+        let maxDateStr = "";
+        rawData.forEach(r => {
+            if (r[COL.DATE] > maxDateStr) maxDateStr = r[COL.DATE];
+        });
+        
+        if (!maxDateStr) return;
+        const lastDate = moment(maxDateStr);
+
+        // 2. 최근 3개 주차 식별 (이번 주 포함)
+        const targetWeeks = [];
+        for (let i = 2; i >= 0; i--) {
+            const d = moment(lastDate).subtract(i, 'weeks');
+            const year = d.isoWeekYear();
+            const week = d.isoWeek();
+            targetWeeks.push({
+                key: `${year}-${week}`,
+                label: `${year}년 ${week}주차`, 
+                start: d.startOf('isoWeek').format('YYYY-MM-DD'),
+                end: d.endOf('isoWeek').format('YYYY-MM-DD')
+            });
+        }
+
+        // 3. 주차별 MD 분류 데이터 집계
+        const weekAgg = {};
+        targetWeeks.forEach(w => weekAgg[w.key] = {});
+
+        rawData.forEach(r => {
+            const d = moment(r[COL.DATE]);
+            if (!d.isValid()) return;
+            
+            const y = d.isoWeekYear();
+            const w = d.isoWeek();
+            const key = `${y}-${w}`;
+
+            if (weekAgg[key]) {
+                const md = r[COL.MD_CLS] || '미분류';
+                const weight = getNum(r[COL.WEIGHT]);
+                weekAgg[key][md] = (weekAgg[key][md] || 0) + weight;
+            }
+        });
+
+        // 4. 각 주차별 Top 3 MD 선정 및 데이터셋 준비
+        const topMdClassesSet = new Set();
+        const weekTop3Data = {}; 
+
+        targetWeeks.forEach(w => {
+            const key = w.key;
+            const stats = weekAgg[key];
+            const sortedMds = Object.keys(stats).sort((a, b) => stats[b] - stats[a]).slice(0, 3);
+            
+            weekTop3Data[key] = {};
+            sortedMds.forEach(md => {
+                topMdClassesSet.add(md);
+                weekTop3Data[key][md] = stats[md];
+            });
+        });
+
+        const allTopMds = Array.from(topMdClassesSet).sort();
+
+        // 5. Chart.js 데이터셋 생성 (Stacked Bar)
+        const datasets = allTopMds.map(md => {
+            return {
+                label: md,
+                data: targetWeeks.map(w => {
+                    return weekTop3Data[w.key][md] || 0;
+                }),
+                backgroundColor: MD_COLOR_MAP[md] || DEFAULT_COLOR,
+                stack: 'Stack 0',
+                barPercentage: 0.6,
+            };
+        });
+
+        // 6. 차트 그리기
+        const ctx = document.getElementById('chartRecentWeeks').getContext('2d');
+        if (chartInstances.recentTrend) chartInstances.recentTrend.destroy();
+
+        chartInstances.recentTrend = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: targetWeeks.map(w => w.label),
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed.y !== null) {
+                                    label += Math.round(context.parsed.y).toLocaleString() + '분';
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        display: true,
+                        color: '#fff',
+                        font: { weight: 'bold', size: 10 },
+                        formatter: function(value, context) {
+                            if (value < 50) return ''; 
+                            return Math.round(value).toLocaleString();
+                        },
+                        textShadowBlur: 2,
+                        textShadowColor: 'rgba(0,0,0,0.5)' 
+                    }
+                },
+                scales: {
+                    x: { 
+                        grid: { display: false },
+                        ticks: { font: { weight: 'bold' } }
+                    },
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: '#f0f0f0' },
+                        title: { display: true, text: '가중분(분)' }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
     }
 
     function updateMdChart(stats, total) {
