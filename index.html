@@ -433,7 +433,7 @@
     const START_YEAR = 2022;
     const END_YEAR = 2026; 
 
-    // MD 분류 고정 색상 맵
+    // MD 분류 고정 색상 맵 (모든 카테고리 추가)
     const MD_COLOR_MAP = {
         '패션의류': '#E74C3C',    // Red
         '패션잡화': '#E67E22',    // Orange
@@ -443,7 +443,11 @@
         '가전/디지털': '#9B59B6', // Purple
         '건강': '#1ABC9C',       // Teal
         '여행/렌탈': '#34495E',   // Dark Blue
-        '기타': '#95A5A6'        // Gray
+        '기타': '#95A5A6',       // Gray
+        '일반식품': '#3498DB',    // Blue (식품과 동일)
+        '여성의류': '#E74C3C',    // Red (패션의류와 동일)
+        '레포츠': '#E67E22',      // Orange (패션잡화와 동일)
+        '건강식품': '#1ABC9C'     // Teal (건강과 동일)
     };
     const DEFAULT_COLOR = '#95A5A6';
 
@@ -622,15 +626,16 @@
         if (!maxDateStr) return;
         const lastDate = moment(maxDateStr);
 
-        // 2. 최근 5개 주차 식별 (5주로 확장)
+        // 2. 최근 5개 주차 식별 (5주로 확장) 및 라벨 형식 변경 (yyyy-mm-dd주차)
         const targetWeeks = [];
         for (let i = 0; i < 5; i++) { // 최근 주차부터 과거순으로
             const d = moment(lastDate).subtract(i, 'weeks');
             const year = d.isoWeekYear();
             const week = d.isoWeek();
+            const startOfWeek = d.startOf('isoWeek').format('YYYY-MM-DD');
             targetWeeks.push({
                 key: `${year}-${week}`,
-                label: `${year}년 ${week}주차`, 
+                label: `${startOfWeek} 주차`, // 라벨 형식 변경
             });
         }
 
