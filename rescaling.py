@@ -51,7 +51,7 @@ def update_csv_weights():
                 try:
                     # 쉼표 제거 및 숫자 변환
                     val = float(str(x).replace(',', ''))
-                    return int(math.ceil(val * 1.09))
+                    return int(math.ceil(val * 0.99))
                 except:
                     return 0
 

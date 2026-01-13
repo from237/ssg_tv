@@ -9,7 +9,8 @@ from collections import Counter
 import os
 import pandas as pd
 import numpy as np
-import math  # 올림 처리를 위해 math 모듈 사용
+import math
+import subprocess  # [필수] Git 명령어를 실행하기 위한 모듈
 
 # 보안 경고 끄기
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -17,11 +18,11 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ==========================================
 # [설정] 수집 날짜 (자동 분할 저장됨)
 # ==========================================
-START_DATE = date(2026, 1, 8)
-END_DATE = date(2026, 1, 11)
+START_DATE = date(2026, 1, 12)
+END_DATE = date(2026, 1, 12)
 
 WEIGHT_FOLDER = "weights"
-MASTER_WEIGHT_FILE = "weight_2022_2025.csv"  # 22~25년 통합 및 폴백용 마스터 파일
+MASTER_WEIGHT_FILE = "weight_2022_2025.csv"
 
 LOADED_WEIGHTS_MAP = {}
 LOADED_FALLBACK_MAP = {}
@@ -59,7 +60,6 @@ def determine_md_class(brand, cat1, cat2):
     return CATEGORY_MAP.get(key, "기타")
 
 
-# 마스터 파일(2022-2025) 미리 로딩 (폴백용)
 def init_master_fallback():
     global MASTER_FALLBACK_MAP
     paths = [os.path.join(WEIGHT_FOLDER, MASTER_WEIGHT_FILE), MASTER_WEIGHT_FILE]
@@ -85,7 +85,6 @@ def init_master_fallback():
         df = df.dropna(subset=['dt', 'weight'])
         df['weekday'] = df['dt'].dt.weekday
 
-        # 요일(weekday)과 시간(hour)별 평균값 저장
         df_avg = df.groupby(['weekday', 'hour'])['weight'].mean().reset_index()
         MASTER_FALLBACK_MAP = dict(zip(zip(df_avg['weekday'], df_avg['hour']), df_avg['weight']))
         print(f"✅ 마스터 가중치 로딩 완료")
@@ -136,15 +135,12 @@ def calc_final_weighted_mins(target_date, b_time, simple_mins, channel):
 
     year = target_date.year
 
-    # 2022~2025: 마스터 파일, 2026 이후: 월별 파일
     if 2022 <= year <= 2025:
         f_name = MASTER_WEIGHT_FILE
     else:
         f_name = f"weight_{target_date.strftime('%Y%m')}.csv"
 
     csv_rate = None
-
-    # 1. 파일 로딩 시도
     w_map = load_weight_file_to_dict(f_name)
 
     start_hour = int(b_time.split(':')[0])
@@ -157,24 +153,18 @@ def calc_final_weighted_mins(target_date, b_time, simple_mins, channel):
             fallback_map = LOADED_FALLBACK_MAP.get(f_name, {})
             csv_rate = fallback_map.get((weekday, start_hour))
 
-    # 2. 파일/매핑 실패 시 마스터 파일 폴백
     if csv_rate is None:
         csv_rate = MASTER_FALLBACK_MAP.get((weekday, start_hour))
 
-    # 3. 그래도 없으면 1.0
     if csv_rate is None:
         csv_rate = 1.0
 
     ch_rate = 0.7 if channel == "IPTV" else (0.3 if channel == "CATV" else 1.0)
 
-    # [수정됨]
-    # 1. 기본 가중분 계산
+    # 가중분 계산 (9% 상향 포함)
     base_weighted_mins = simple_mins * csv_rate * ch_rate
-
-    # 2. 전체 가중분 9% 상향 (1.09 곱하기)
     up_weighted_mins = base_weighted_mins * 1.09
 
-    # 3. 최종 소숫점 올림 처리 후 정수 변환
     return int(math.ceil(up_weighted_mins))
 
 
@@ -191,10 +181,40 @@ def calc_duration_minutes(time_str):
         return 0
 
 
+# [Git 자동화 함수]
+def push_to_github():
+    try:
+        print("\n🐙 [Git] 변경 사항을 GitHub에 푸시합니다...")
+
+        # 1. 파일 스테이징
+        subprocess.run(["git", "add", "."], check=True)
+
+        # 2. 변경사항 확인 및 커밋
+        result = subprocess.run(["git", "diff-index", "--quiet", "HEAD", "--"], capture_output=True)
+
+        if result.returncode != 0:
+            today_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            commit_message = f"Data Update: {today_str}"
+
+            subprocess.run(["git", "commit", "-m", commit_message], check=True)
+            print(f" ✅ 커밋 완료: {commit_message}")
+
+            # 3. 푸시
+            subprocess.run(["git", "push"], check=True)
+            print(" 🚀 GitHub 푸시 성공!")
+        else:
+            print(" ⚠️ 변경된 데이터가 없어 푸시하지 않았습니다.")
+
+    except subprocess.CalledProcessError as e:
+        print(f" ❌ Git 오류: {e}")
+        print(" ※ 먼저 터미널에서 'git remote add origin ...' 설정을 완료해야 합니다.")
+    except Exception as e:
+        print(f" ❌ 시스템 오류: {e}")
+
+
 def run():
     print(f"🚀 [자동 분할 모드] 수집 시작: {START_DATE} ~ {END_DATE}")
 
-    # 마스터 가중치 로딩 (폴백 준비)
     init_master_fallback()
 
     session = requests.Session()
@@ -258,8 +278,6 @@ def run():
                         t_seen[bt] = seen + 1
 
                     sm = calc_duration_minutes(bt)
-
-                    # [최종 가중분 계산 (9% 상향 포함)]
                     wm = calc_final_weighted_mins(target_date, bt, sm, ch)
 
                     cards = dl.select("dd > div.card[data-main='Y']")
@@ -308,7 +326,10 @@ def run():
         except Exception as e:
             print(f" ❌ 에러: {e}")
 
-    print(f"\n🎉 모든 수집 완료!")
+    print(f"\n🎉 모든 수집 및 파일 저장이 완료되었습니다!")
+
+    # [Git 자동화 실행]
+    push_to_github()
 
 
 if __name__ == "__main__":
