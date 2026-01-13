@@ -18,7 +18,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ==========================================
 # [설정] 수집 날짜 (자동 분할 저장됨)
 # ==========================================
-START_DATE = date(2026, 1, 1)
+START_DATE = date(2026, 1, 13)
 END_DATE = date(2026, 1, 13)
 
 WEIGHT_FOLDER = "weights"
@@ -186,8 +186,10 @@ def push_to_github():
     try:
         print("\n🐙 [Git] 변경 사항을 GitHub에 푸시합니다...")
 
+        # 1. 파일 스테이징
         subprocess.run(["git", "add", "."], check=True)
 
+        # 2. 변경사항 확인 및 커밋
         result = subprocess.run(["git", "diff-index", "--quiet", "HEAD", "--"], capture_output=True)
 
         if result.returncode != 0:
@@ -197,6 +199,7 @@ def push_to_github():
             subprocess.run(["git", "commit", "-m", commit_message], check=True)
             print(f" ✅ 커밋 완료: {commit_message}")
 
+            # 3. 푸시
             subprocess.run(["git", "push"], check=True)
             print(" 🚀 GitHub 푸시 성공!")
         else:
@@ -307,30 +310,14 @@ def run():
                             continue
 
             if daily_rows:
-                # [중복 제거 및 저장 로직 수정]
-                # 1. 수집된 데이터를 DataFrame으로 변환
-                df_new = pd.DataFrame(daily_rows, columns=headers_list)
-
-                # 2. 기존 파일이 있는지 확인
-                if os.path.exists(current_filename):
-                    try:
-                        df_old = pd.read_csv(current_filename, encoding='utf-8-sig')
-                    except Exception:
-                        df_old = pd.DataFrame(columns=headers_list)
-
-                    # 3. 기존 데이터와 새 데이터 병합
-                    df_combined = pd.concat([df_old, df_new], ignore_index=True)
-
-                    # 4. 중복 제거 (방송일자, 방송시간, 상품ID 기준, 마지막 항목 유지)
-                    df_combined.drop_duplicates(subset=['방송일자', '방송시간', '상품ID'], keep='last', inplace=True)
-
-                    # 5. 파일 저장
-                    df_combined.to_csv(current_filename, index=False, encoding='utf-8-sig')
-                else:
-                    # 파일이 없으면 새 데이터 바로 저장
-                    df_new.to_csv(current_filename, index=False, encoding='utf-8-sig')
-
-                print(f" ✅ {len(daily_rows)}건 수집 / 중복제거 후 저장 완료")
+                file_exists = os.path.exists(current_filename)
+                mode = 'a' if file_exists else 'w'
+                with open(current_filename, mode, newline='', encoding='utf-8-sig') as f:
+                    writer = csv.writer(f)
+                    if not file_exists:
+                        writer.writerow(headers_list)
+                    writer.writerows(daily_rows)
+                print(f" ✅ {len(daily_rows)}건 완료")
             else:
                 print(f" ⚠️ 데이터 없음")
 
