@@ -131,26 +131,32 @@
     .trend-md-badge { display: inline-block; padding: 4px 2px; border-radius: 6px; color: #fff; font-weight: 700; font-size: 0.75rem; margin-bottom: 1px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .trend-percent { font-size: 0.75rem; color: #6c757d; font-weight: 600; display: block; margin-top: 1px; }
 
-    /* [신규 스타일] 주간 편성표 관련 */
+    /* [주간 편성표 스타일 수정] */
     .schedule-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
-    .schedule-table th, .schedule-table td { border: 1px solid #e0e0e0; padding: 5px; vertical-align: top; font-size: 0.8rem; }
-    .schedule-table th { background: #f8f9fa; text-align: center; font-weight: 700; padding: 10px; color: #495057; }
-    .schedule-table td { height: 80px; position: relative; background: #fff; transition: background 0.2s; }
-    .schedule-table td:hover { background-color: #fcfcfc; }
+    /* 1. 가로줄 진하게 (#adb5bd) */
+    .schedule-table th, .schedule-table td { border: 1px solid #ced4da; padding: 5px; vertical-align: top; font-size: 0.8rem; border-bottom-color: #adb5bd; border-bottom-width: 1px; }
+    .schedule-table th { background: #f8f9fa; text-align: center; font-weight: 700; padding: 10px; color: #495057; border-bottom-width: 2px; }
 
-    /* PGM 블록 스타일 */
-    .pgm-block { display: block; background: #fff; border: 1px solid #e9ecef; border-radius: 6px; padding: 6px; margin-bottom: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); transition: all 0.2s; }
-    .pgm-block:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.08); border-color: var(--accent-color); z-index: 5; position: relative; }
+    .schedule-table td { height: 80px; position: relative; transition: background 0.2s; }
+    /* 2. 짝수 시간대 음영 (.even-row 클래스로 제어) */
+    .even-row td { background-color: #f8f9fa; }
+    .schedule-table td:hover { background-color: #e9ecef !important; }
 
-    .pgm-badges { display: flex; gap: 4px; margin-bottom: 4px; flex-wrap: wrap; }
+    .pgm-block { display: block; background: #fff; border: 1px solid #e9ecef; border-radius: 6px; padding: 6px; margin-bottom: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); transition: all 0.2s; position: relative; }
+    .pgm-block:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.08); border-color: var(--accent-color); z-index: 5; }
+
+    .pgm-badges { display: flex; gap: 4px; margin-bottom: 4px; flex-wrap: wrap; align-items: center; }
+    /* 3. 시작 시간 뱃지 스타일 */
+    .pgm-time-badge { font-size: 0.7rem; font-weight: 800; color: #495057; background: #e9ecef; padding: 1px 5px; border-radius: 4px; letter-spacing: -0.5px; border: 1px solid #dee2e6; }
+
     .pgm-badge-md { font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; color: #fff; font-weight: 700; }
-    .pgm-badge-ch { font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; background: #f1f3f5; color: #495057; border: 1px solid #dee2e6; }
 
-    .pgm-title { font-weight: 700; font-size: 0.8rem; color: #343a40; margin-bottom: 2px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .pgm-brand { font-size: 0.75rem; color: #868e96; margin-bottom: 2px; }
-    .pgm-weight { font-size: 0.75rem; font-weight: 800; color: var(--accent-color); text-align: right; margin-top: 4px; }
+    /* 4. 브랜드 크게, 상품명 작게 */
+    .pgm-brand { font-size: 0.95rem; font-weight: 800; color: #2c3e50; margin-bottom: 2px; letter-spacing: -0.5px; line-height: 1.2; }
+    .pgm-title { font-weight: 400; font-size: 0.75rem; color: #868e96; margin-bottom: 4px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
 
-    /* 하이라이트 효과: 선택되지 않은 블록 흐리게 */
+    .pgm-weight { font-size: 0.75rem; font-weight: 800; color: var(--accent-color); text-align: right; margin-top: auto; border-top: 1px dashed #eee; padding-top: 4px;}
+
     .pgm-dimmed { opacity: 0.15; filter: grayscale(100%); }
 
     .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
@@ -173,8 +179,6 @@
        .history-table-container { overflow-x: auto; }
        .history-table th, .history-table td { min-width: 80px; }
        .chart-container { height: 250px; }
-
-       /* 주간편성표 모바일 대응 */
        .schedule-table { min-width: 800px; }
        .weekly-table-wrapper { overflow-x: auto; }
     }
@@ -205,23 +209,23 @@
             </button>
         </div>
         <div class="nav-item">
-            <button class="nav-link w-100" id="tab-weekly-btn" onclick="switchTab('tab-weekly')">
-                <i class="bi bi-calendar3 me-2"></i>주간 편성표
-            </button>
-        </div>
-        <div class="nav-item">
             <button class="nav-link w-100" id="tab-brand-btn" onclick="switchTab('tab-brand')">
                 <i class="bi bi-grid-fill me-2"></i>브랜드/상품 분석
             </button>
         </div>
         <div class="nav-item">
-            <button class="nav-link w-100" id="tab-daily-btn" onclick="switchTab('tab-daily')">
-                <i class="bi bi-calendar-week-fill me-2"></i>일자별 편성표
+            <button class="nav-link w-100" id="tab-search-btn" onclick="switchTab('tab-search')">
+                <i class="bi bi-search me-2"></i>검색 및 다운로드
             </button>
         </div>
         <div class="nav-item">
-            <button class="nav-link w-100" id="tab-search-btn" onclick="switchTab('tab-search')">
-                <i class="bi bi-search me-2"></i>검색 및 다운로드
+            <button class="nav-link w-100" id="tab-weekly-btn" onclick="switchTab('tab-weekly')">
+                <i class="bi bi-calendar3 me-2"></i>주간 편성표
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link w-100" id="tab-daily-btn" onclick="switchTab('tab-daily')">
+                <i class="bi bi-calendar-week-fill me-2"></i>일자별 편성표
             </button>
         </div>
     </div>
@@ -610,7 +614,6 @@
           if (isHistoryMode) document.getElementById('filterArea').style.display = 'none';
           else resetAndRender();
       } else if (currentTab === 'weekly') {
-          // 탭 전환 시 렌더링 (최초 로딩이 안된 경우 대비)
           if(document.getElementById('weeklyTbody').innerHTML.trim() === "") renderWeeklySchedule();
       }
     }
@@ -630,8 +633,8 @@
                 const m = moment(d);
                 // 주차 계산 (월요일 기준)
                 const startOfWeek = m.startOf('isoWeek').format('YYYY-MM-DD');
-                const endOfWeek = m.endOf('isoWeek').format('YYYY-MM-DD');
-                const label = `${startOfWeek} ~ ${endOfWeek}`;
+                // [수정됨] 주차 라벨 간소화 (종료일 제외)
+                const label = `${startOfWeek} 주차`;
                 weekSet.add(JSON.stringify({ val: startOfWeek, label: label }));
             }
             if (r[COL.MD_CLS]) mdSet.add(r[COL.MD_CLS]);
@@ -697,33 +700,34 @@
         tbody.innerHTML = '';
 
         for(let hour=0; hour<24; hour++) {
-            let rowHtml = `<tr><td style="text-align:center; font-weight:bold; background:#f8f9fa;">${hour}시</td>`;
+            // [수정됨] 짝수 시간대에 클래스 추가하여 배경색 적용
+            const rowClass = (hour % 2 === 0) ? 'even-row' : '';
+            let rowHtml = `<tr class="${rowClass}"><td style="text-align:center; font-weight:bold; background:#f8f9fa;">${hour}시</td>`;
 
             for(let dayIdx=0; dayIdx<7; dayIdx++) {
                 const targetDate = days[dayIdx];
 
-                // 해당 날짜 + 해당 시간(start hour)에 시작하는 방송 찾기
-                // 방송시간 형식이 "HH:MM~HH:MM" 이라 가정하고 앞부분 파싱
                 const items = weeklyData.filter(r => {
                     if (r[COL.DATE] !== targetDate) return false;
-                    const timeStr = r[COL.TIME]; // "10:20~11:20"
+                    const timeStr = r[COL.TIME];
                     if (!timeStr) return false;
                     const startH = parseInt(timeStr.split(':')[0]);
                     return startH === hour;
                 });
 
-                // 셀 내용 생성
                 let cellContent = '';
                 items.forEach(item => {
                     const md = item[COL.MD_CLS];
                     const color = MD_COLOR_MAP[md] || DEFAULT_COLOR;
-                    const ch = item[COL.CHANNEL] === 'IPTV' ? 'IP' : (item[COL.CHANNEL] === 'CATV' ? 'CA' : 'ALL');
+
+                    // 시작 시간 추출 (예: 10:20)
+                    const startTime = (item[COL.TIME] || '').split('~')[0].trim();
 
                     cellContent += `
                         <div class="pgm-block" data-md="${md}">
                             <div class="pgm-badges">
+                                <span class="pgm-time-badge">${startTime}</span>
                                 <span class="pgm-badge-md" style="background-color:${color}">${md}</span>
-                                <span class="pgm-badge-ch">${ch}</span>
                             </div>
                             <div class="pgm-brand">${item[COL.BRAND]}</div>
                             <div class="pgm-title" title="${item[COL.NAME]}">${item[COL.NAME]}</div>
@@ -738,7 +742,6 @@
             tbody.insertAdjacentHTML('beforeend', rowHtml);
         }
 
-        // 렌더링 후 하이라이트 적용 (혹시 선택된게 있다면)
         updateWeeklyHighlight();
     }
 
