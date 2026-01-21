@@ -182,32 +182,38 @@ def calc_duration_minutes(time_str):
 
 
 # [Git 자동화 함수]
+# [Git 자동화 함수 - 강제 푸시 버전]
 def push_to_github():
     try:
         print("\n🐙 [Git] 변경 사항을 GitHub에 푸시합니다...")
 
+        # 1. 모든 변경사항 담기
         subprocess.run(["git", "add", "."], check=True)
 
-        result = subprocess.run(["git", "diff-index", "--quiet", "HEAD", "--"], capture_output=True)
+        # 2. 커밋 메시지 생성
+        today_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        commit_message = f"Data Update: {today_str}"
 
-        if result.returncode != 0:
-            today_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            commit_message = f"Data Update: {today_str}"
+        # 3. 변경사항이 있는지 확인 후 커밋
+        # (이미 커밋된 상태일 수도 있으므로 try-except로 감싸거나, 상태 체크)
+        try:
+            # 변경사항이 없으면 여기서 에러가 날 수 있으나 무시해도 됨
+            subprocess.run(["git", "commit", "-m", commit_message], check=False)
+        except:
+            pass
 
-            subprocess.run(["git", "commit", "-m", commit_message], check=True)
-            print(f" ✅ 커밋 완료: {commit_message}")
+        # 4. [핵심] 강제 푸시 실행 (-f 옵션 추가)
+        # 내 컴퓨터의 데이터로 GitHub를 덮어씌웁니다.
+        print(" 🚀 GitHub로 강제 업로드 중...")
+        subprocess.run(["git", "push", "-f", "origin", "main"], check=True)
 
-            subprocess.run(["git", "push"], check=True)
-            print(" 🚀 GitHub 푸시 성공!")
-        else:
-            print(" ⚠️ 변경된 데이터가 없어 푸시하지 않았습니다.")
+        print(" ✅ GitHub 푸시 성공! (Force Push)")
 
     except subprocess.CalledProcessError as e:
-        print(f" ❌ Git 오류: {e}")
-        print(" ※ 먼저 터미널에서 'git remote add origin ...' 설정을 완료해야 합니다.")
+        print(f" ❌ Git 오류 발생: {e}")
+        print(" ※ 터미널에서 'git remote -v' 로 연결 상태를 확인해보세요.")
     except Exception as e:
         print(f" ❌ 시스템 오류: {e}")
-
 
 def run():
     print(f"🚀 [자동 분할 모드] 수집 시작: {START_DATE} ~ {END_DATE}")
