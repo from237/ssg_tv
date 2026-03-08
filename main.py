@@ -10,7 +10,7 @@ import os
 import pandas as pd
 import numpy as np
 import math
-import subprocess  # [필수] Git 명령어를 실행하기 위한 모듈
+import subprocess  # Git 자동화를 위한 모듈
 
 # 보안 경고 끄기
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -18,7 +18,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ==========================================
 # [설정] 수집 날짜 (자동 분할 저장됨)
 # ==========================================
-START_DATE = date(2026, 3, 6)
+START_DATE = date(2026, 2, 1)
 END_DATE = date(2026, 3, 8)
 
 WEIGHT_FOLDER = "weights"
@@ -76,8 +76,16 @@ def init_master_fallback():
             df = pd.read_csv(f_path, encoding='cp949')
 
         df.columns = [c.strip().lower() for c in df.columns]
+
+        # [수정됨] hour 컬럼이 없으면 에러 방지
+        if 'hour' not in df.columns:
+            print("⚠️ 마스터 파일에 'hour' 컬럼이 없습니다. 가중치가 1.0으로 고정됩니다.")
+            return
+
+        df['hour'] = pd.to_numeric(df['hour'], errors='coerce').fillna(0).astype(int)
+
         if 'weight' in df.columns and df['weight'].dtype == object:
-            df['weight'] = df['weight'].astype(str).str.replace('%', '')
+            df['weight'] = df['weight'].astype(str).str.replace('%', '', regex=False)
             df['weight'] = pd.to_numeric(df['weight'], errors='coerce')
             if df['weight'].mean() > 5: df['weight'] /= 100
 
@@ -85,9 +93,13 @@ def init_master_fallback():
         df = df.dropna(subset=['dt', 'weight'])
         df['weekday'] = df['dt'].dt.weekday
 
+        # [수정됨] numpy 타입을 순수 파이썬 int/float로 명시적 캐스팅 (키 매핑 오류 완벽 차단)
         df_avg = df.groupby(['weekday', 'hour'])['weight'].mean().reset_index()
-        MASTER_FALLBACK_MAP = dict(zip(zip(df_avg['weekday'], df_avg['hour']), df_avg['weight']))
-        print(f"✅ 마스터 가중치 로딩 완료")
+        MASTER_FALLBACK_MAP.clear()
+        for _, row in df_avg.iterrows():
+            MASTER_FALLBACK_MAP[(int(row['weekday']), int(row['hour']))] = float(row['weight'])
+
+        print(f"✅ 마스터 가중치 로딩 완료 (총 {len(MASTER_FALLBACK_MAP)}개 시간대)")
 
     except Exception as e:
         print(f"❌ 마스터 파일 로딩 에러: {e}")
@@ -109,24 +121,34 @@ def load_weight_file_to_dict(file_name):
         df.columns = [c.strip().lower() for c in df.columns]
         if not {'date', 'hour', 'weight'}.issubset(df.columns): return None
 
+        df['hour'] = pd.to_numeric(df['hour'], errors='coerce').fillna(0).astype(int)
+
         if df['weight'].dtype == object:
-            df['weight'] = df['weight'].astype(str).str.replace('%', '')
+            df['weight'] = df['weight'].astype(str).str.replace('%', '', regex=False)
             df['weight'] = pd.to_numeric(df['weight'], errors='coerce')
             if df['weight'].mean() > 5: df['weight'] /= 100
-
-        df_exact = df.groupby(['date', 'hour'])['weight'].mean().reset_index()
-        w_map = dict(zip(zip(df_exact['date'], df_exact['hour']), df_exact['weight']))
-        LOADED_WEIGHTS_MAP[file_name] = w_map
 
         df['dt'] = pd.to_datetime(df['date'], errors='coerce')
         df = df.dropna(subset=['dt', 'weight'])
         df['weekday'] = df['dt'].dt.weekday
+        df['date_str'] = df['dt'].dt.strftime("%Y-%m-%d")
+
+        # [수정됨] 명시적 타입 캐스팅
+        df_exact = df.groupby(['date_str', 'hour'])['weight'].mean().reset_index()
+        w_map = {}
+        for _, row in df_exact.iterrows():
+            w_map[(row['date_str'], int(row['hour']))] = float(row['weight'])
+        LOADED_WEIGHTS_MAP[file_name] = w_map
+
         df_fallback = df.groupby(['weekday', 'hour'])['weight'].mean().reset_index()
-        f_map = dict(zip(zip(df_fallback['weekday'], df_fallback['hour']), df_fallback['weight']))
+        f_map = {}
+        for _, row in df_fallback.iterrows():
+            f_map[(int(row['weekday']), int(row['hour']))] = float(row['weight'])
         LOADED_FALLBACK_MAP[file_name] = f_map
 
         return w_map
     except Exception as e:
+        print(f"❌ 개별 가중치 파일({file_name}) 로딩 에러: {e}")
         return None
 
 
@@ -143,8 +165,9 @@ def calc_final_weighted_mins(target_date, b_time, simple_mins, channel):
     csv_rate = None
     w_map = load_weight_file_to_dict(f_name)
 
+    # [수정됨] 명확하게 int 타입 보장
     start_hour = int(b_time.split(':')[0])
-    weekday = target_date.weekday()
+    weekday = int(target_date.weekday())
 
     if w_map:
         d_str = target_date.strftime("%Y-%m-%d")
@@ -156,6 +179,7 @@ def calc_final_weighted_mins(target_date, b_time, simple_mins, channel):
     if csv_rate is None:
         csv_rate = MASTER_FALLBACK_MAP.get((weekday, start_hour))
 
+    # 최후의 보루 1.0 (여기서 찍히고 있었음)
     if csv_rate is None:
         csv_rate = 1.0
 
@@ -181,39 +205,28 @@ def calc_duration_minutes(time_str):
         return 0
 
 
-# [Git 자동화 함수]
-# [Git 자동화 함수 - 강제 푸시 버전]
 def push_to_github():
     try:
         print("\n🐙 [Git] 변경 사항을 GitHub에 푸시합니다...")
 
-        # 1. 모든 변경사항 담기
         subprocess.run(["git", "add", "."], check=True)
 
-        # 2. 커밋 메시지 생성
-        today_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        commit_message = f"Data Update: {today_str}"
-
-        # 3. 변경사항이 있는지 확인 후 커밋
-        # (이미 커밋된 상태일 수도 있으므로 try-except로 감싸거나, 상태 체크)
         try:
-            # 변경사항이 없으면 여기서 에러가 날 수 있으나 무시해도 됨
+            today_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            commit_message = f"Data Update: {today_str}"
             subprocess.run(["git", "commit", "-m", commit_message], check=False)
         except:
             pass
 
-        # 4. [핵심] 강제 푸시 실행 (-f 옵션 추가)
-        # 내 컴퓨터의 데이터로 GitHub를 덮어씌웁니다.
-        print(" 🚀 GitHub로 강제 업로드 중...")
+        # [중요] 강제 푸시 옵션 추가 (-f)
         subprocess.run(["git", "push", "-f", "origin", "main"], check=True)
-
-        print(" ✅ GitHub 푸시 성공! (Force Push)")
+        print(" 🚀 GitHub 푸시 성공! (Force Push)")
 
     except subprocess.CalledProcessError as e:
-        print(f" ❌ Git 오류 발생: {e}")
-        print(" ※ 터미널에서 'git remote -v' 로 연결 상태를 확인해보세요.")
+        print(f" ❌ Git 오류: {e}")
     except Exception as e:
         print(f" ❌ 시스템 오류: {e}")
+
 
 def run():
     print(f"🚀 [자동 분할 모드] 수집 시작: {START_DATE} ~ {END_DATE}")
@@ -313,30 +326,21 @@ def run():
                             continue
 
             if daily_rows:
-                # [중복 제거 및 저장 로직 수정]
-                # 1. 수집된 데이터를 DataFrame으로 변환
                 df_new = pd.DataFrame(daily_rows, columns=headers_list)
 
-                # 2. 기존 파일이 있는지 확인
                 if os.path.exists(current_filename):
                     try:
                         df_old = pd.read_csv(current_filename, encoding='utf-8-sig')
                     except Exception:
                         df_old = pd.DataFrame(columns=headers_list)
 
-                    # 3. 기존 데이터와 새 데이터 병합
                     df_combined = pd.concat([df_old, df_new], ignore_index=True)
-
-                    # 4. 중복 제거 (방송일자, 방송시간, 상품ID 기준, 마지막 항목 유지)
                     df_combined.drop_duplicates(subset=['방송일자', '방송시간', '상품ID'], keep='last', inplace=True)
-
-                    # 5. 파일 저장
                     df_combined.to_csv(current_filename, index=False, encoding='utf-8-sig')
                 else:
-                    # 파일이 없으면 새 데이터 바로 저장
                     df_new.to_csv(current_filename, index=False, encoding='utf-8-sig')
 
-                print(f" ✅ {len(daily_rows)}건 수집 / 중복제거 후 저장 완료")
+                print(f" ✅ {len(daily_rows)}건 수집 / 저장 완료")
             else:
                 print(f" ⚠️ 데이터 없음")
 
@@ -347,7 +351,6 @@ def run():
 
     print(f"\n🎉 모든 수집 및 파일 저장이 완료되었습니다!")
 
-    # [Git 자동화 실행]
     push_to_github()
 
 
