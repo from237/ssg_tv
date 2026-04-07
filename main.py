@@ -18,8 +18,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ==========================================
 # [설정] 수집 날짜 (자동 분할 저장됨)
 # ==========================================
-START_DATE = date(2026, 3, 30)
-END_DATE = date(2026, 3, 31)
+START_DATE = date(2026, 4, 1)
+END_DATE = date(2026, 4, 6)
 
 WEIGHT_FOLDER = "weights"
 MASTER_WEIGHT_FILE = "weight_2022_2025.csv"
@@ -77,15 +77,15 @@ def init_master_fallback():
 
         df.columns = [c.strip().lower() for c in df.columns]
 
-        # [수정됨] hour 컬럼이 없으면 에러 방지
         if 'hour' not in df.columns:
             print("⚠️ 마스터 파일에 'hour' 컬럼이 없습니다. 가중치가 1.0으로 고정됩니다.")
             return
 
         df['hour'] = pd.to_numeric(df['hour'], errors='coerce').fillna(0).astype(int)
 
-        if 'weight' in df.columns and df['weight'].dtype == object:
-            df['weight'] = df['weight'].astype(str).str.replace('%', '', regex=False)
+        # [수정됨] Pandas 버전에 상관없이 무조건 문자열 치환 후 숫자로 변환
+        if 'weight' in df.columns:
+            df['weight'] = df['weight'].astype(str).str.replace('%', '', regex=False).str.replace(',', '', regex=False)
             df['weight'] = pd.to_numeric(df['weight'], errors='coerce')
             if df['weight'].mean() > 5: df['weight'] /= 100
 
@@ -93,7 +93,6 @@ def init_master_fallback():
         df = df.dropna(subset=['dt', 'weight'])
         df['weekday'] = df['dt'].dt.weekday
 
-        # [수정됨] numpy 타입을 순수 파이썬 int/float로 명시적 캐스팅 (키 매핑 오류 완벽 차단)
         df_avg = df.groupby(['weekday', 'hour'])['weight'].mean().reset_index()
         MASTER_FALLBACK_MAP.clear()
         for _, row in df_avg.iterrows():
@@ -123,8 +122,9 @@ def load_weight_file_to_dict(file_name):
 
         df['hour'] = pd.to_numeric(df['hour'], errors='coerce').fillna(0).astype(int)
 
-        if df['weight'].dtype == object:
-            df['weight'] = df['weight'].astype(str).str.replace('%', '', regex=False)
+        # [수정됨] Pandas 버전에 상관없이 무조건 문자열 치환 후 숫자로 변환
+        if 'weight' in df.columns:
+            df['weight'] = df['weight'].astype(str).str.replace('%', '', regex=False).str.replace(',', '', regex=False)
             df['weight'] = pd.to_numeric(df['weight'], errors='coerce')
             if df['weight'].mean() > 5: df['weight'] /= 100
 
@@ -133,7 +133,6 @@ def load_weight_file_to_dict(file_name):
         df['weekday'] = df['dt'].dt.weekday
         df['date_str'] = df['dt'].dt.strftime("%Y-%m-%d")
 
-        # [수정됨] 명시적 타입 캐스팅
         df_exact = df.groupby(['date_str', 'hour'])['weight'].mean().reset_index()
         w_map = {}
         for _, row in df_exact.iterrows():
@@ -165,7 +164,6 @@ def calc_final_weighted_mins(target_date, b_time, simple_mins, channel):
     csv_rate = None
     w_map = load_weight_file_to_dict(f_name)
 
-    # [수정됨] 명확하게 int 타입 보장
     start_hour = int(b_time.split(':')[0])
     weekday = int(target_date.weekday())
 
@@ -179,13 +177,11 @@ def calc_final_weighted_mins(target_date, b_time, simple_mins, channel):
     if csv_rate is None:
         csv_rate = MASTER_FALLBACK_MAP.get((weekday, start_hour))
 
-    # 최후의 보루 1.0 (여기서 찍히고 있었음)
     if csv_rate is None:
         csv_rate = 1.0
 
     ch_rate = 0.7 if channel == "IPTV" else (0.3 if channel == "CATV" else 1.0)
 
-    # 가중분 계산 (9% 상향 포함)
     base_weighted_mins = simple_mins * csv_rate * ch_rate
     up_weighted_mins = base_weighted_mins * 1.09
 
@@ -218,7 +214,6 @@ def push_to_github():
         except:
             pass
 
-        # [중요] 강제 푸시 옵션 추가 (-f)
         subprocess.run(["git", "push", "-f", "origin", "main"], check=True)
         print(" 🚀 GitHub 푸시 성공! (Force Push)")
 
