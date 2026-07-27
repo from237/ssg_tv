@@ -18,8 +18,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ==========================================
 # [설정] 수집 날짜 (자동 분할 저장됨)
 # ==========================================
-START_DATE = date(2026, 7, 22)
-END_DATE = date(2026, 7, 22)
+START_DATE = date(2026, 7, 23)
+END_DATE = date(2026, 7, 26)
 WEIGHT_FOLDER = "weights"
 MASTER_WEIGHT_FILE = "weight_2022_2025.csv"
 
