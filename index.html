@@ -208,6 +208,54 @@
     .co-btn.active .co-dot { background: var(--co-color); box-shadow: 0 0 0 4px rgba(0,0,0,0.05); }
     .co-btn.active .co-name { color: var(--co-color); }
     .co-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .sub-pills { background: #f1f3f5; }
+    .sub-pills .nav-link { font-size: 0.88rem; padding: 8px 12px; }
+
+    /* 3사 요약 */
+    .kpi-card { border-radius: var(--radius-md); background: #fff; box-shadow: var(--soft-shadow);
+                padding: 18px 20px; border-top: 4px solid var(--co-color); height: 100%; }
+    .kpi-co { font-weight: 800; font-size: 1.05rem; color: var(--co-color); margin-bottom: 2px; }
+    .kpi-period { font-size: 0.72rem; color: #adb5bd; font-weight: 600; margin-bottom: 12px; }
+    .kpi-main { font-size: 1.65rem; font-weight: 800; color: #2c3e50; line-height: 1.1; }
+    .kpi-main small { font-size: 0.8rem; color: #95a5a6; font-weight: 600; margin-left: 3px; }
+    .kpi-grid { display: flex; gap: 18px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e9ecef; }
+    .kpi-sub { flex: 1; }
+    .kpi-sub-label { font-size: 0.7rem; color: #95a5a6; font-weight: 700; text-transform: uppercase; }
+    .kpi-sub-val { font-size: 0.98rem; font-weight: 700; color: #34495e; }
+    .kpi-top { margin-top: 10px; font-size: 0.78rem; color: #7f8c8d; }
+    .kpi-top b { color: #2c3e50; }
+
+    .brand-rank-item { display: flex; align-items: center; gap: 10px; padding: 8px 0;
+                       border-bottom: 1px solid #f4f6f8; }
+    .brand-rank-item:last-child { border-bottom: none; }
+    .brand-rank-no { width: 22px; height: 22px; border-radius: 6px; background: #eef2f5; color: #8a99a8;
+                     font-size: 0.72rem; font-weight: 800; display: flex; align-items: center;
+                     justify-content: center; flex-shrink: 0; }
+    .brand-rank-item.is-top .brand-rank-no { background: var(--co-color); color: #fff; }
+    .brand-rank-name { flex-grow: 1; font-size: 0.88rem; font-weight: 700; color: #2c3e50;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-rank-val { font-size: 0.78rem; color: #7f8c8d; font-weight: 700; flex-shrink: 0; }
+    .brand-rank-bar { height: 4px; border-radius: 2px; background: var(--co-color); opacity: 0.25;
+                      margin-top: 3px; }
+
+    .share-table th, .share-table td { text-align: center; font-size: 0.82rem; padding: 7px 5px;
+                                       vertical-align: middle; }
+    .share-table th { background: #f8f9fa; font-weight: 700; color: #495057; }
+    .share-table td.md-cell { text-align: left; font-weight: 700; white-space: nowrap; }
+    .share-bar-wrap { position: relative; background: #f1f3f5; border-radius: 4px; height: 20px; }
+    .share-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; opacity: 0.85; }
+    .share-bar-txt { position: relative; font-size: 0.75rem; font-weight: 700; line-height: 20px; color: #2c3e50; }
+
+    /* 3사 통합 편성표 */
+    .allsched-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+    .allsched-table th, .allsched-table td { border: 1px solid #dee2e6; padding: 3px; vertical-align: top; }
+    .allsched-table th { background: #f8f9fa; text-align: center; font-weight: 800; padding: 10px;
+                         font-size: 0.9rem; border-bottom-width: 2px; }
+    .allsched-table th.co-head { color: #fff; }
+    .allsched-table td.hour-cell { text-align: center; font-weight: 700; background: #f8f9fa;
+                                   font-size: 0.8rem; color: #495057; }
+    .allsched-table tr.even-row td:not(.hour-cell) { background-color: #fbfcfd; }
   </style>
 </head>
 <body>
@@ -229,41 +277,60 @@
   </header>
 
   <div class="container mb-4">
-    <div class="co-bar" id="companyBar"></div>
-
     <div class="nav nav-pills" id="mainTab" role="tablist">
         <div class="nav-item">
-            <button class="nav-link active w-100" id="tab-trend-btn" onclick="switchTab('tab-trend')">
+            <button class="nav-link active w-100" id="tab-overview-btn" onclick="switchTab('tab-overview')">
+                <i class="bi bi-columns-gap me-2"></i>3사 요약
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link w-100" id="tab-allsched-btn" onclick="switchTab('tab-allsched')">
+                <i class="bi bi-calendar3-range me-2"></i>3사 통합 편성표
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link w-100" id="tab-detail-btn" onclick="switchTab('tab-detail')">
+                <i class="bi bi-search me-2"></i>회사별 상세분석
+            </button>
+        </div>
+    </div>
+
+    <div id="detailNav" style="display:none;">
+      <div class="co-bar" id="companyBar"></div>
+      <div class="nav nav-pills sub-pills" id="subTab" role="tablist">
+        <div class="nav-item">
+            <button class="nav-link active w-100" id="tab-trend-btn" onclick="switchSubTab('tab-trend')">
                 <i class="bi bi-graph-up-arrow me-2"></i>Trend 분석
             </button>
         </div>
         <div class="nav-item">
-            <button class="nav-link w-100" id="tab-brand-btn" onclick="switchTab('tab-brand')">
-                <i class="bi bi-grid-fill me-2"></i>브랜드/상품 분석
+            <button class="nav-link w-100" id="tab-brand-btn" onclick="switchSubTab('tab-brand')">
+                <i class="bi bi-grid-fill me-2"></i>브랜드/상품
             </button>
         </div>
         <div class="nav-item">
-            <button class="nav-link w-100" id="tab-search-btn" onclick="switchTab('tab-search')">
-                <i class="bi bi-search me-2"></i>검색 및 다운로드
+            <button class="nav-link w-100" id="tab-search-btn" onclick="switchSubTab('tab-search')">
+                <i class="bi bi-search me-2"></i>검색/다운로드
             </button>
         </div>
         <div class="nav-item">
-            <button class="nav-link w-100" id="tab-weekly-btn" onclick="switchTab('tab-weekly')">
+            <button class="nav-link w-100" id="tab-weekly-btn" onclick="switchSubTab('tab-weekly')">
                 <i class="bi bi-calendar3 me-2"></i>주간 편성표
             </button>
         </div>
         <div class="nav-item">
-            <button class="nav-link w-100" id="tab-daily-btn" onclick="switchTab('tab-daily')">
+            <button class="nav-link w-100" id="tab-daily-btn" onclick="switchSubTab('tab-daily')">
                 <i class="bi bi-calendar-week-fill me-2"></i>일자별 편성표
             </button>
         </div>
+      </div>
     </div>
 
     <div id="filterArea">
         <div class="custom-card" style="background: #fff; border-left: 5px solid #3498db; padding: 15px 20px;">
           <div class="d-flex align-items-center gap-3">
              <i class="bi bi-info-circle-fill text-primary fs-5"></i>
-             <div class="text-secondary fw-medium" style="font-size: 0.9rem;">가중분은 3사 모두 SK스토아 실적 곡선(요일×시간)으로 산출했습니다. MD분류는 SK 기준 15종으로 통일했으며, 브랜드/상품정보는 각 사 공개 정보를 준용했습니다.</div>
+             <div class="text-secondary fw-medium" style="font-size: 0.9rem;">가중분은 SK스토아 기준으로 산출하였습니다. MD분류는 S사 기준으로 통합이 가능한 점 양해 부탁드립니다.</div>
           </div>
         </div>
 
@@ -305,6 +372,61 @@
   </div>
 
   <div class="container">
+
+    <!-- ============ 3사 요약 ============ -->
+    <div id="tab-overview" class="fade-in">
+        <div class="row g-3 mb-4" id="kpiRow"></div>
+
+        <div class="custom-card mb-4">
+            <h5 class="chart-card-title">MD 분류별 편성 비중 비교 <span class="text-muted fw-normal" style="font-size:0.8rem;">(각 사 가중분 내 비중 %)</span></h5>
+            <div class="chart-container" style="height: 560px;">
+                <canvas id="chartOverviewMd"></canvas>
+            </div>
+        </div>
+
+        <div class="custom-card mb-4">
+            <h5 class="chart-card-title" style="border-left-color:#e67e22;">MD 분류별 비중 표</h5>
+            <div class="table-responsive">
+                <table class="table table-sm share-table mb-0" id="shareTable"></table>
+            </div>
+        </div>
+
+        <h5 class="mb-3 fw-bold text-dark"><i class="bi bi-trophy-fill text-warning me-2"></i>회사별 주력 브랜드 Top 5</h5>
+        <div class="row g-3" id="brandRow"></div>
+    </div>
+
+    <!-- ============ 3사 통합 편성표 ============ -->
+    <div id="tab-allsched" class="fade-in" style="display:none;">
+        <div class="custom-card mb-4" style="padding: 20px;">
+            <div class="d-flex flex-wrap align-items-end gap-3 justify-content-between">
+                <div class="d-flex gap-3 flex-wrap">
+                    <div>
+                        <label class="filter-label mb-2 d-block">📅 편성 일자</label>
+                        <select id="allSchedDate" class="form-select" style="min-width:200px;" onchange="renderAllSchedule()"></select>
+                    </div>
+                    <div>
+                        <label class="filter-label mb-2 d-block">🔍 MD 분류 하이라이트</label>
+                        <select id="allSchedMd" class="form-select" style="min-width:180px;" onchange="updateAllSchedHighlight()">
+                            <option value="ALL" selected>전체 보기</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <small class="text-muted">* 블록 클릭 시 상품상세로 이동합니다.</small>
+                </div>
+            </div>
+        </div>
+        <div class="custom-card" style="padding:0; overflow:hidden;">
+            <div class="table-responsive">
+                <table class="allsched-table">
+                    <thead><tr id="allSchedHead"></tr></thead>
+                    <tbody id="allSchedBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-detail" style="display:none;">
 
     <div id="tab-trend" class="fade-in">
         <div class="row mb-4 g-4">
@@ -516,6 +638,8 @@
            </div>
        </div>
     </div>
+
+    </div><!-- /#tab-detail -->
   </div>
 
   <script>
@@ -524,11 +648,14 @@
     const END_YEAR = new Date().getFullYear();
 
     // 파일명 규칙: data/{key}_{year}.csv
+    // ★ 표시 순서 고정: SK스토아 → 신세계TV쇼핑 → K쇼핑
     const COMPANIES = [
-        { key: 'ssg',   name: '신세계TV쇼핑', color: '#E74C3C' },
-        { key: 'sk',    name: 'SK스토아',    color: '#E67E22' },
-        { key: 'kshop', name: 'K쇼핑',       color: '#3498DB' }
+        { key: 'sk',    name: 'SK스토아',     short: 'SK',  color: '#E67E22' },
+        { key: 'ssg',   name: '신세계TV쇼핑',  short: '신세계', color: '#E74C3C' },
+        { key: 'kshop', name: 'K쇼핑',        short: 'K쇼핑', color: '#3498DB' }
     ];
+    const CO_BY_KEY = {};
+    COMPANIES.forEach(c => CO_BY_KEY[c.key] = c);
 
     // 통합 MD분류 15종 (md_mapping.py의 UNIFIED_ORDER와 동일)
     const MD_COLOR_MAP = {
@@ -548,15 +675,14 @@
     let companyCounts = {};
     let currentCompany = null;
     let rawData = [];
-    let currentTab = 'trend';
+    let currentTab = 'overview';
+    let currentSubTab = 'trend';
     let historySource = 'trend';
     let currentSearchResults = [];
     let brandTabFilteredData = [];
 
     const chartInstances = {
-        mdShare: null,
-        topBrands: null,
-        topItems: null
+        mdShare: null, topBrands: null, topItems: null, overviewMd: null
     };
 
     const COL = {
@@ -630,8 +756,21 @@
 
             console.log('회사별 로드:', companyCounts);
             renderCompanyBar();
+
+            // 기간/MD 옵션은 3사 합집합 기준으로 한 번만 구성한다.
+            // (회사를 바꿔도 선택한 기간이 유지되도록)
+            loadInitialFilter(allData);
+            updatePeriodOptions();
+            initAllSchedTab();
+
             document.getElementById('loading').style.display = 'none';
-            applyCompany(loaded[0].key);
+            currentCompany = loaded[0].key;
+            rawData = allData.filter(r => r[COL.CO_KEY] === loaded[0].key);
+            initDailyTab();
+            initWeeklyTab();
+            document.querySelector('.co-btn:not(:disabled)').classList.add('active');
+            updateHeaderSub();
+            renderOverview();
 
         } catch (e) {
             handleError(e);
@@ -660,34 +799,44 @@
     }
 
     function applyCompany(key) {
-        if (currentCompany === key) return;
         currentCompany = key;
-        const co = COMPANIES.find(c => c.key === key);
-
         document.querySelectorAll('.co-btn').forEach(b => b.classList.remove('active'));
         const btn = document.getElementById('co-' + key);
         if (btn) btn.classList.add('active');
 
         rawData = allData.filter(r => r[COL.CO_KEY] === key);
 
-        // 회사가 바뀌면 기간/분류 옵션이 전부 달라지므로 의존 UI를 다시 만든다
+        // 회사별로 달라지는 것만 다시 만든다.
+        // (기간/MD 옵션은 3사 합집합 기준이라 그대로 두어 선택 상태가 유지된다)
         resetDetailViews();
-        loadInitialFilter();
-        updatePeriodOptions();
+        resetCascadingFilters();
         initDailyTab();
         initWeeklyTab();
+        updateHeaderSub();
+        renderSubTab();
+    }
 
+    function resetCascadingFilters() {
+        for (let i = 1; i < FILTER_IDS.length; i++) {
+            const sel = document.getElementById(FILTER_IDS[i]);
+            sel.innerHTML = '<option value="ALL">전체</option>';
+            sel.disabled = true;
+        }
+    }
+
+    function updateHeaderSub() {
+        const co = CO_BY_KEY[currentCompany];
         let minD = '', maxD = '';
-        rawData.forEach(r => {
+        allData.forEach(r => {
             const d = r[COL.DATE];
             if (!d) return;
             if (!minD || d < minD) minD = d;
             if (!maxD || d > maxD) maxD = d;
         });
+        const total = allData.length.toLocaleString();
         document.getElementById('headerSub').innerHTML =
-            `${co.name} · ${rawData.length.toLocaleString()}건 · ${minD} ~ ${maxD}`;
-
-        renderCurrentTab();
+            `3사 통합 ${total}건 · ${minD} ~ ${maxD}` +
+            (currentTab === 'detail' && co ? ` · <b>${co.name}</b> ${rawData.length.toLocaleString()}건` : '');
     }
 
     function resetDetailViews() {
@@ -705,42 +854,323 @@
     }
 
     function renderCurrentTab() {
-        if (currentTab === 'trend') renderTrendTab();
-        else if (currentTab === 'brand') resetAndRender();
-        else if (currentTab === 'weekly') renderWeeklySchedule();
-        else if (currentTab === 'daily') renderDailySchedule();
+        if (currentTab === 'overview') renderOverview();
+        else if (currentTab === 'allsched') renderAllSchedule();
+        else if (currentTab === 'detail') renderSubTab();
     }
 
     function switchTab(tabId) {
-      document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('#mainTab .nav-link').forEach(el => el.classList.remove('active'));
       document.getElementById(tabId + '-btn').classList.add('active');
 
-      document.getElementById('tab-trend').style.display = 'none';
-      document.getElementById('tab-brand').style.display = 'none';
-      document.getElementById('tab-daily').style.display = 'none';
-      document.getElementById('tab-weekly').style.display = 'none';
-      document.getElementById('tab-search').style.display = 'none';
-
+      ['tab-overview', 'tab-allsched', 'tab-detail'].forEach(id => {
+          document.getElementById(id).style.display = 'none';
+      });
       document.getElementById(tabId).style.display = 'block';
       currentTab = tabId.replace('tab-', '');
 
-      if (currentTab === 'daily' || currentTab === 'weekly') {
-          document.getElementById('filterArea').style.display = 'none';
-      } else {
-          document.getElementById('filterArea').style.display = 'block';
-      }
+      // 회사 선택 바 + 하위 탭은 '회사별 상세'에서만 노출
+      document.getElementById('detailNav').style.display =
+          (currentTab === 'detail') ? 'block' : 'none';
 
-      if (currentTab === 'trend') renderTrendTab();
-      else if (currentTab === 'brand') {
-          const isHistoryMode = document.getElementById('historyView').style.display === 'block';
-          if (isHistoryMode) document.getElementById('filterArea').style.display = 'none';
-          else resetAndRender();
-      } else if (currentTab === 'weekly') {
-          if(document.getElementById('weeklyTbody').innerHTML.trim() === "") renderWeeklySchedule();
+      if (currentTab === 'overview') {
+          document.getElementById('filterArea').style.display = 'block';
+          renderOverview();
+      } else if (currentTab === 'allsched') {
+          document.getElementById('filterArea').style.display = 'none';
+          renderAllSchedule();
+      } else {
+          // 하위 탭 표시 상태와 필터 노출은 switchSubTab이 전부 책임진다
+          if (!currentCompany) {
+              const first = COMPANIES.find(c => companyCounts[c.key] > 0);
+              if (first) applyCompany(first.key);
+          }
+          switchSubTab('tab-' + currentSubTab);
       }
     }
 
+    function switchSubTab(tabId) {
+      document.querySelectorAll('#subTab .nav-link').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId + '-btn').classList.add('active');
+
+      ['tab-trend', 'tab-brand', 'tab-daily', 'tab-weekly', 'tab-search'].forEach(id => {
+          document.getElementById(id).style.display = 'none';
+      });
+      document.getElementById(tabId).style.display = 'block';
+      currentSubTab = tabId.replace('tab-', '');
+
+      const isHistory = document.getElementById('historyView').style.display === 'block';
+      const useFilter = ['trend', 'brand', 'search'].includes(currentSubTab)
+                        && !(currentSubTab === 'brand' && isHistory);
+      document.getElementById('filterArea').style.display = useFilter ? 'block' : 'none';
+
+      renderSubTab();
+    }
+
+    function renderSubTab() {
+      if (currentSubTab === 'trend') renderTrendTab();
+      else if (currentSubTab === 'brand') {
+          if (document.getElementById('historyView').style.display !== 'block') resetAndRender();
+      }
+      else if (currentSubTab === 'weekly') renderWeeklySchedule();
+      else if (currentSubTab === 'daily') renderDailySchedule();
+    }
+
     const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
+
+    // ============================================================
+    // [3사 요약] 편성 비중 / 주력 브랜드 비교
+    // ============================================================
+    const MD_ORDER = ['의류','언더웨어','잡화','뷰티','가전','주방','리빙','레포츠',
+                      '건강식품','일반식품','여행','보험','일반렌탈','대품렌탈','기타합계'];
+
+    function companySlice(key) {
+        // 요약 화면은 기간 + MD분류(0단계)까지만 적용한다.
+        // 하위 카테고리 필터는 회사마다 체계가 달라 3사 비교에 쓸 수 없다.
+        return getFilteredDataBasedOnDropdowns(
+            allData.filter(r => r[COL.CO_KEY] === key), 1);
+    }
+
+    function aggregate(rows) {
+        const md = {}, brand = {}, days = new Set();
+        let weight = 0;
+        rows.forEach(r => {
+            const w = getNum(r[COL.WEIGHT]);
+            weight += w;
+            const m = r[COL.MD_CLS] || '기타합계';
+            md[m] = (md[m] || 0) + w;
+            const b = (r[COL.BRAND] || '').trim();
+            if (b && b !== '(브랜드없음)') brand[b] = (brand[b] || 0) + w;
+            if (r[COL.DATE]) days.add(r[COL.DATE]);
+        });
+        return { rows: rows.length, weight, md, brand, days: days.size };
+    }
+
+    function renderOverview() {
+        const stats = {};
+        COMPANIES.forEach(co => stats[co.key] = aggregate(companySlice(co.key)));
+
+        const periodText = document.getElementById('multiSelectAnchor').innerText || '전체';
+        renderKpi(stats, periodText);
+        renderOverviewChart(stats);
+        renderShareTable(stats);
+        renderBrandRow(stats);
+    }
+
+    function renderKpi(stats, periodText) {
+        const row = document.getElementById('kpiRow');
+        row.innerHTML = '';
+        COMPANIES.forEach(co => {
+            const st = stats[co.key];
+            const topMd = Object.keys(st.md).sort((a, b) => st.md[b] - st.md[a])[0];
+            const topShare = topMd && st.weight ? (st.md[topMd] / st.weight * 100).toFixed(1) : '0';
+            const perDay = st.days ? Math.round(st.weight / st.days) : 0;
+            const col = document.createElement('div');
+            col.className = 'col-lg-4 col-md-6';
+            col.innerHTML = `
+              <div class="kpi-card" style="--co-color:${co.color}">
+                <div class="kpi-co">${co.name}</div>
+                <div class="kpi-period">${periodText}</div>
+                <div class="kpi-main">${Math.round(st.weight).toLocaleString()}<small>가중분</small></div>
+                <div class="kpi-grid">
+                  <div class="kpi-sub"><div class="kpi-sub-label">편성 건수</div>
+                       <div class="kpi-sub-val">${st.rows.toLocaleString()}건</div></div>
+                  <div class="kpi-sub"><div class="kpi-sub-label">브랜드 수</div>
+                       <div class="kpi-sub-val">${Object.keys(st.brand).length.toLocaleString()}개</div></div>
+                  <div class="kpi-sub"><div class="kpi-sub-label">일평균</div>
+                       <div class="kpi-sub-val">${perDay.toLocaleString()}분</div></div>
+                </div>
+                <div class="kpi-top">주력 분류 · <b>${topMd || '-'}</b> ${topShare}%</div>
+              </div>`;
+            row.appendChild(col);
+        });
+    }
+
+    function renderOverviewChart(stats) {
+        const ctx = document.getElementById('chartOverviewMd').getContext('2d');
+        if (chartInstances.overviewMd) chartInstances.overviewMd.destroy();
+
+        // 어느 회사에서든 등장하는 분류만, 표준 순서대로
+        const labels = MD_ORDER.filter(m => COMPANIES.some(co => (stats[co.key].md[m] || 0) > 0));
+
+        const datasets = COMPANIES.map(co => {
+            const st = stats[co.key];
+            return {
+                label: co.name,
+                data: labels.map(m => st.weight ? +((st.md[m] || 0) / st.weight * 100).toFixed(2) : 0),
+                backgroundColor: co.color + 'CC',
+                borderColor: co.color,
+                borderWidth: 1,
+                borderRadius: 3
+            };
+        });
+
+        chartInstances.overviewMd = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 14, font: { weight: '700' } } },
+                    datalabels: { display: false },
+                    tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.x}%` } }
+                },
+                scales: {
+                    x: { beginAtZero: true, grid: { color: '#f0f0f0' },
+                         ticks: { callback: v => v + '%' } },
+                    y: { grid: { display: false }, ticks: { font: { weight: '700' } } }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+    }
+
+    function renderShareTable(stats) {
+        const labels = MD_ORDER.filter(m => COMPANIES.some(co => (stats[co.key].md[m] || 0) > 0));
+        const maxShare = Math.max(1, ...labels.map(m =>
+            Math.max(...COMPANIES.map(co => stats[co.key].weight
+                ? stats[co.key].md[m] / stats[co.key].weight * 100 : 0))));
+
+        let html = '<thead><tr><th style="width:110px;">MD 분류</th>';
+        COMPANIES.forEach(co => {
+            html += `<th class="co-head" style="color:${co.color}">${co.name}</th>`;
+        });
+        html += '<th style="width:90px;">최다 운영</th></tr></thead><tbody>';
+
+        labels.forEach(m => {
+            html += `<tr><td class="md-cell"><span class="trend-md-badge" style="background-color:${MD_COLOR_MAP[m] || DEFAULT_COLOR}">${m}</span></td>`;
+            let best = null, bestV = -1;
+            COMPANIES.forEach(co => {
+                const st = stats[co.key];
+                const v = st.weight ? st.md[m] / st.weight * 100 : 0;
+                if (v > bestV) { bestV = v; best = co; }
+            });
+            COMPANIES.forEach(co => {
+                const st = stats[co.key];
+                const v = st.weight ? st.md[m] / st.weight * 100 : 0;
+                const w = (v / maxShare * 100).toFixed(1);
+                html += `<td><div class="share-bar-wrap">
+                    <div class="share-bar" style="width:${w}%;background:${co.color}"></div>
+                    <div class="share-bar-txt">${v.toFixed(1)}%</div></div></td>`;
+            });
+            html += `<td><span class="badge" style="background:${best.color}">${best.short}</span></td></tr>`;
+        });
+        html += '</tbody>';
+        document.getElementById('shareTable').innerHTML = html;
+    }
+
+    function renderBrandRow(stats) {
+        const row = document.getElementById('brandRow');
+        row.innerHTML = '';
+        COMPANIES.forEach(co => {
+            const st = stats[co.key];
+            const top = Object.keys(st.brand).sort((a, b) => st.brand[b] - st.brand[a]).slice(0, 5);
+            const max = top.length ? st.brand[top[0]] : 1;
+            let items = top.map((b, i) => `
+                <div class="brand-rank-item ${i === 0 ? 'is-top' : ''}">
+                  <div class="brand-rank-no">${i + 1}</div>
+                  <div style="flex-grow:1; min-width:0;">
+                    <div class="brand-rank-name" title="${b}">${b}</div>
+                    <div class="brand-rank-bar" style="width:${(st.brand[b] / max * 100).toFixed(0)}%"></div>
+                  </div>
+                  <div class="brand-rank-val">${Math.round(st.brand[b]).toLocaleString()}분</div>
+                </div>`).join('');
+            if (!top.length) items = '<div class="text-muted small p-3 text-center">브랜드 정보 없음</div>';
+
+            const col = document.createElement('div');
+            col.className = 'col-lg-4 col-md-6';
+            col.innerHTML = `<div class="custom-card h-100" style="--co-color:${co.color}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="fw-bold mb-0" style="color:${co.color}">${co.name}</h6>
+                  <span class="text-muted" style="font-size:0.75rem;">총 ${Object.keys(st.brand).length.toLocaleString()}개</span>
+                </div>${items}</div>`;
+            row.appendChild(col);
+        });
+    }
+
+    // ============================================================
+    // [3사 통합 편성표]
+    // ============================================================
+    function initAllSchedTab() {
+        const dates = new Set(), mds = new Set();
+        allData.forEach(r => {
+            if (r[COL.DATE]) dates.add(r[COL.DATE]);
+            if (r[COL.MD_CLS]) mds.add(r[COL.MD_CLS]);
+        });
+        const sorted = Array.from(dates).sort().reverse();
+        const sel = document.getElementById('allSchedDate');
+        sel.innerHTML = '';
+        sorted.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d; opt.text = `${d} (${getDayOfWeek(d)})`;
+            const wd = moment(d).day();
+            if (wd === 0) opt.style.color = '#e74c3c'; else if (wd === 6) opt.style.color = '#3498db';
+            sel.appendChild(opt);
+        });
+        const today = moment().format('YYYY-MM-DD');
+        sel.value = sorted.find(d => d <= today) || sorted[0];
+
+        const mdSel = document.getElementById('allSchedMd');
+        mdSel.innerHTML = '<option value="ALL" selected>전체 보기</option>';
+        MD_ORDER.filter(m => mds.has(m)).forEach(m => {
+            const o = document.createElement('option'); o.value = m; o.text = m; mdSel.appendChild(o);
+        });
+    }
+
+    function renderAllSchedule() {
+        const date = document.getElementById('allSchedDate').value;
+        if (!date) return;
+
+        const head = document.getElementById('allSchedHead');
+        head.innerHTML = '<th style="width:52px;">Time</th>' +
+            COMPANIES.map(co =>
+                `<th class="co-head" style="background:${co.color}">${co.name}</th>`).join('');
+
+        const dayRows = allData.filter(r => r[COL.DATE] === date);
+        const tbody = document.getElementById('allSchedBody');
+        tbody.innerHTML = '';
+
+        for (let hour = 0; hour < 24; hour++) {
+            let html = `<tr class="${hour % 2 === 0 ? 'even-row' : ''}">` +
+                       `<td class="hour-cell">${hour}시</td>`;
+            COMPANIES.forEach(co => {
+                const items = dayRows.filter(r => {
+                    if (r[COL.CO_KEY] !== co.key) return false;
+                    const t = r[COL.TIME]; if (!t) return false;
+                    return parseInt(t.trim().split(':')[0], 10) === hour;
+                });
+                html += '<td>' + items.map(it => {
+                    const md = it[COL.MD_CLS] || '';
+                    const color = MD_COLOR_MAP[md] || DEFAULT_COLOR;
+                    const startMin = (it[COL.TIME] || '').split('~')[0].trim().split(':')[1] || '00';
+                    const ch = it[COL.CHANNEL] === 'IPTV' ? 'IP'
+                             : (it[COL.CHANNEL] === 'CATV' ? 'CA' : 'ALL');
+                    const link = it[COL.LINK] || '#';
+                    return `<div class="pgm-block" data-md="${md}" onclick="window.open('${link}','_blank')">
+                        <div class="pgm-row-top">
+                          <div class="pgm-time-info">${startMin}분
+                            <span class="pgm-badge pgm-badge-ch">${ch}</span>
+                            <span class="pgm-badge pgm-badge-md" style="background-color:${color}">${md}</span>
+                          </div>
+                          <span class="pgm-weight">${Math.round(getNum(it[COL.WEIGHT]))}</span>
+                        </div>
+                        <div class="pgm-row-bottom">
+                          <span class="pgm-brand-text">[${it[COL.BRAND]}]</span> ${it[COL.NAME] || ''}
+                        </div></div>`;
+                }).join('') + '</td>';
+            });
+            tbody.insertAdjacentHTML('beforeend', html + '</tr>');
+        }
+        updateAllSchedHighlight();
+    }
+
+    function updateAllSchedHighlight() {
+        const sel = document.getElementById('allSchedMd').value;
+        document.querySelectorAll('#allSchedBody .pgm-block').forEach(b => {
+            if (sel === 'ALL' || b.getAttribute('data-md') === sel) b.classList.remove('pgm-dimmed');
+            else b.classList.add('pgm-dimmed');
+        });
+    }
 
     // ============================================================
     // [Tab Weekly Logic] 주간 편성표 (수정됨)
@@ -1021,12 +1451,13 @@
         return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
     }
 
-    function getFilteredDataBasedOnDropdowns() {
+    function getFilteredDataBasedOnDropdowns(dataset, maxLevel) {
       const type = document.getElementById('periodType').value;
       const selectedPeriods = getSelectedPeriodValues();
-      const filters = FILTER_IDS.map(id => document.getElementById(id).value);
+      const lv = (maxLevel === undefined) ? FILTER_IDS.length : maxLevel;
+      const filters = FILTER_IDS.slice(0, lv).map(id => document.getElementById(id).value);
       if (selectedPeriods.length === 0) return [];
-      return rawData.filter(r => {
+      return (dataset || rawData).filter(r => {
         const d = r[COL.DATE]; if(!d) return false;
         const m = moment(d); if(!m.isValid()) return false;
         let k = '';
@@ -1043,14 +1474,17 @@
     }
 
     function onFilterChanged() {
-        if (currentTab === 'trend') renderTrendTab();
-        else if (currentTab === 'brand') resetAndRender();
+        if (currentTab === 'overview') renderOverview();
+        else if (currentTab === 'detail') {
+            if (currentSubTab === 'trend') renderTrendTab();
+            else if (currentSubTab === 'brand') resetAndRender();
+        }
     }
 
-    function loadInitialFilter() {
+    function loadInitialFilter(dataset) {
         const mdCol = FILTER_COLS[0];
         const uniqueValues = new Set();
-        rawData.forEach(r => { if(r[mdCol]) uniqueValues.add(r[mdCol]); });
+        (dataset || rawData).forEach(r => { if(r[mdCol]) uniqueValues.add(r[mdCol]); });
         populateSelect(document.getElementById(FILTER_IDS[0]), Array.from(uniqueValues).sort());
     }
 
@@ -1085,7 +1519,7 @@
       try {
         const type = document.getElementById('periodType').value;
         const periodSet = new Set();
-        rawData.forEach(r => {
+        (allData.length ? allData : rawData).forEach(r => {
           const d = r[COL.DATE]; if(!d) return;
           const m = moment(d); if (!m.isValid()) return;
           let key = '', sortValue = '';
@@ -1267,10 +1701,11 @@
 
     function backToItems() {
       document.getElementById('historyView').style.display = 'none';
-      if (historySource === 'daily') switchTab('tab-daily');
-      else if (historySource === 'search') switchTab('tab-search');
-      else if (historySource === 'trend') switchTab('tab-trend');
-      else if (historySource === 'weekly') switchTab('tab-weekly');
+      // 방송이력은 여러 하위 탭에서 열리므로 원래 있던 하위 탭으로 되돌린다
+      if (historySource === 'daily') switchSubTab('tab-daily');
+      else if (historySource === 'search') switchSubTab('tab-search');
+      else if (historySource === 'trend') switchSubTab('tab-trend');
+      else if (historySource === 'weekly') switchSubTab('tab-weekly');
       else { document.getElementById('itemView').style.display = 'block'; document.getElementById('filterArea').style.display = 'block'; }
       window.scrollTo(0, 0);
     }
