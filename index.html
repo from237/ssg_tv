@@ -261,9 +261,14 @@
                                        vertical-align: middle; }
     .share-table th { background: #f8f9fa; font-weight: 700; color: #495057; }
     .share-table td.md-cell { text-align: left; font-weight: 700; white-space: nowrap; }
-    .share-bar-wrap { position: relative; background: #f1f3f5; border-radius: 4px; height: 20px; }
-    .share-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; opacity: 0.85; }
-    .share-bar-txt { position: relative; font-size: 0.75rem; font-weight: 700; line-height: 20px; color: #2c3e50; }
+    .stack-bar { display: flex; width: 100%; height: 26px; border-radius: 6px; overflow: hidden;
+                 background: #f1f3f5; box-shadow: inset 0 1px 2px rgba(0,0,0,0.04); }
+    .stack-seg { display: flex; align-items: center; justify-content: center; color: #fff;
+                 font-size: 0.74rem; font-weight: 800; letter-spacing: -0.02em;
+                 transition: filter 0.15s; overflow: hidden; white-space: nowrap;
+                 text-shadow: 0 1px 2px rgba(0,0,0,0.18); }
+    .stack-seg:hover { filter: brightness(1.12); }
+    .share-table td { padding: 8px 6px; }
 
     /* 3사 통합 편성표 */
     .allsched-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
@@ -403,15 +408,21 @@
         <h5 class="mb-3 fw-bold text-dark"><i class="bi bi-bookmark-star-fill text-primary me-2"></i>주력 분류 Top 5</h5>
         <div class="row g-3 mb-4" id="mdTopRow"></div>
 
-        <div class="custom-card mb-4">
-            <h5 class="chart-card-title" style="border-left-color:#e67e22;">MD 분류별 비중 표</h5>
+        <h5 class="mb-3 fw-bold text-dark"><i class="bi bi-trophy-fill text-warning me-2"></i>주력 브랜드 Top 5</h5>
+        <div class="row g-3 mb-4" id="brandRow"></div>
+
+        <div class="custom-card">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+              <h5 class="chart-card-title mb-0" style="border-left-color:#e67e22;">MD 분류별 3사 비중 분포</h5>
+              <div id="shareLegend" class="d-flex gap-3 align-items-center"></div>
+            </div>
+            <div class="text-muted mb-2" style="font-size:0.8rem;">
+              막대 길이 = 같은 분류에 대한 3사의 상대 비중 · 막대 안 숫자 = 각 사 편성 내 비중
+            </div>
             <div class="table-responsive">
                 <table class="table table-sm share-table mb-0" id="shareTable"></table>
             </div>
         </div>
-
-        <h5 class="mb-3 fw-bold text-dark"><i class="bi bi-trophy-fill text-warning me-2"></i>회사별 주력 브랜드 Top 5</h5>
-        <div class="row g-3" id="brandRow"></div>
     </div>
 
     <!-- ============ 3사 통합 편성표 ============ -->
@@ -1128,10 +1139,10 @@
               <div class="kpi-card" style="--co-color:${co.color}">
                 <div class="kpi-co">${co.name}</div>
                 <div class="kpi-period">${periodText}</div>
-                <div class="kpi-main">${Math.round(st.weight).toLocaleString()}<small>가중분</small></div>
+                <div class="kpi-main">${Object.keys(st.brand).length.toLocaleString()}<small>브랜드</small></div>
                 <div class="kpi-grid">
-                  <div class="kpi-sub"><div class="kpi-sub-label">브랜드 수</div>
-                       <div class="kpi-sub-val">${Object.keys(st.brand).length.toLocaleString()}개</div></div>
+                  <div class="kpi-sub"><div class="kpi-sub-label">운영 분류</div>
+                       <div class="kpi-sub-val">${Object.keys(st.md).length}개</div></div>
                   <div class="kpi-sub"><div class="kpi-sub-label">주력 분류</div>
                        <div class="kpi-sub-val">${topMd || '-'} <span class="text-muted" style="font-size:0.8rem;">${topShare}%</span></div></div>
                 </div>
@@ -1173,38 +1184,48 @@
     }
 
     function renderShareTable(stats) {
-        // MD_ORDER는 buildMdOrder()가 SK 가중분 내림차순으로 이미 정렬해둔 상태
+        // MD_ORDER는 buildMdOrder()가 SK 가중분 내림차순으로 정렬해둔 상태.
         const labels = MD_ORDER.filter(m => COMPANIES.some(co => (stats[co.key].md[m] || 0) > 0));
-        const maxShare = Math.max(1, ...labels.map(m =>
-            Math.max(...COMPANIES.map(co => stats[co.key].weight
-                ? stats[co.key].md[m] / stats[co.key].weight * 100 : 0))));
 
-        let html = '<thead><tr><th style="width:110px;">MD 분류</th>';
-        COMPANIES.forEach(co => {
-            html += `<th class="co-head" style="color:${co.color}">${co.name}</th>`;
-        });
-        html += '<th style="width:90px;">최다 운영</th></tr></thead><tbody>';
+        // 범례
+        document.getElementById('shareLegend').innerHTML = COMPANIES.map(co =>
+            `<span style="font-size:0.8rem;font-weight:700;color:#5a6b7c;">
+               <span style="display:inline-block;width:11px;height:11px;border-radius:3px;
+                            background:${co.color};margin-right:5px;vertical-align:-1px;"></span>${co.name}
+             </span>`).join('');
+
+        let html = '<thead><tr><th style="width:110px;">MD 분류</th>'
+                 + '<th>3사 비중 분포</th>'
+                 + '<th style="width:88px;">최다 운영</th></tr></thead><tbody>';
 
         labels.forEach(m => {
-            html += `<tr><td class="md-cell"><span class="trend-md-badge" style="background-color:${MD_COLOR_MAP[m] || DEFAULT_COLOR}">${m}</span></td>`;
-            let best = null, bestV = -1;
+            // 각 사가 '자기 편성 안에서' 이 분류에 쓰는 비중
+            const own = {};
             COMPANIES.forEach(co => {
                 const st = stats[co.key];
-                const v = st.weight ? st.md[m] / st.weight * 100 : 0;
-                if (v > bestV) { bestV = v; best = co; }
+                own[co.key] = st.weight ? (st.md[m] || 0) / st.weight * 100 : 0;
             });
-            COMPANIES.forEach(co => {
-                const st = stats[co.key];
-                const v = st.weight ? st.md[m] / st.weight * 100 : 0;
-                const w = (v / maxShare * 100).toFixed(1);
-                html += `<td><div class="share-bar-wrap">
-                    <div class="share-bar" style="width:${w}%;background:${co.color}"></div>
-                    <div class="share-bar-txt">${v.toFixed(1)}%</div></div></td>`;
-            });
-            html += `<td><span class="badge" style="background:${best.color}">${best.short}</span></td></tr>`;
+            // 같은 길이의 막대를 3사 상대 비중으로 나눈다
+            const sum = COMPANIES.reduce((a, co) => a + own[co.key], 0) || 1;
+
+            let best = COMPANIES[0], bestV = -1;
+            COMPANIES.forEach(co => { if (own[co.key] > bestV) { bestV = own[co.key]; best = co; } });
+
+            const segs = COMPANIES.map(co => {
+                const pct = own[co.key] / sum * 100;
+                if (pct <= 0) return '';
+                const label = pct >= 11 ? `${own[co.key].toFixed(1)}%` : '';
+                return `<div class="stack-seg" style="width:${pct.toFixed(2)}%;background:${co.color}"
+                             title="${co.name} · 자사 편성 내 ${own[co.key].toFixed(1)}% (상대 ${pct.toFixed(1)}%)">${label}</div>`;
+            }).join('');
+
+            html += `<tr>
+                <td class="md-cell"><span class="trend-md-badge" style="background-color:${MD_COLOR_MAP[m] || DEFAULT_COLOR}">${m}</span></td>
+                <td><div class="stack-bar">${segs}</div></td>
+                <td><span class="badge" style="background:${best.color}">${best.short}</span></td>
+            </tr>`;
         });
-        html += '</tbody>';
-        document.getElementById('shareTable').innerHTML = html;
+        document.getElementById('shareTable').innerHTML = html + '</tbody>';
     }
 
     function renderBrandRow(stats) {
