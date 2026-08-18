@@ -239,6 +239,11 @@
     .brand-rank-bar { height: 4px; border-radius: 2px; background: var(--co-color); opacity: 0.25;
                       margin-top: 3px; }
 
+    .md-chip { display: inline-block; padding: 1px 7px; border-radius: 20px; color: #fff;
+               font-size: 0.68rem; font-weight: 800; white-space: nowrap; flex-shrink: 0;
+               box-shadow: 0 1px 3px rgba(0,0,0,0.12); letter-spacing: -0.02em; }
+    .brand-rank-name { flex-grow: 0; }
+
     .share-table th, .share-table td { text-align: center; font-size: 0.82rem; padding: 7px 5px;
                                        vertical-align: middle; }
     .share-table th { background: #f8f9fa; font-weight: 700; color: #495057; }
@@ -359,12 +364,12 @@
 
           <div class="p-3 rounded-3" style="background-color: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.05);">
             <div class="row g-2">
-               <div class="col-md-2"><label class="filter-label small">MD 분류</label><select id="mdClass" class="form-select form-select-sm" onchange="updateCascadingFilters(0)"><option value="ALL">전체</option></select></div>
-               <div class="col-md-2"><label class="filter-label small">대분류</label><select id="itemClass1" class="form-select form-select-sm" onchange="updateCascadingFilters(1)" disabled><option value="ALL">전체</option></select></div>
-               <div class="col-md-2"><label class="filter-label small">중분류</label><select id="itemClass2" class="form-select form-select-sm" onchange="updateCascadingFilters(2)" disabled><option value="ALL">전체</option></select></div>
-               <div class="col-md-2"><label class="filter-label small">소분류</label><select id="itemClass3" class="form-select form-select-sm" onchange="updateCascadingFilters(3)" disabled><option value="ALL">전체</option></select></div>
-               <div class="col-md-2"><label class="filter-label small">세분류</label><select id="itemClass4" class="form-select form-select-sm" onchange="updateCascadingFilters(4)" disabled><option value="ALL">전체</option></select></div>
-               <div class="col-md-2"><label class="filter-label small">세세분류</label><select id="itemClass5" class="form-select form-select-sm" onchange="updateCascadingFilters(5)" disabled><option value="ALL">전체</option></select></div>
+               <div class="col-md-4"><label class="filter-label small">MD 분류</label><select id="mdClass" class="form-select form-select-sm" onchange="onFilterChanged()"><option value="ALL">전체</option></select></div>
+               <div class="col-md-8 d-flex align-items-end">
+                  <span class="text-muted" style="font-size:0.8rem;">
+                     <i class="bi bi-info-circle me-1"></i>세부 카테고리는 3사 체계가 달라 비교가 불가능하여 MD 분류로만 필터링합니다.
+                  </span>
+               </div>
             </div>
           </div>
         </div>
@@ -377,12 +382,8 @@
     <div id="tab-overview" class="fade-in">
         <div class="row g-3 mb-4" id="kpiRow"></div>
 
-        <div class="custom-card mb-4">
-            <h5 class="chart-card-title">MD 분류별 편성 비중 비교 <span class="text-muted fw-normal" style="font-size:0.8rem;">(각 사 가중분 내 비중 %)</span></h5>
-            <div class="chart-container" style="height: 560px;">
-                <canvas id="chartOverviewMd"></canvas>
-            </div>
-        </div>
+        <h5 class="mb-3 fw-bold text-dark"><i class="bi bi-bookmark-star-fill text-primary me-2"></i>주력 분류 Top 5</h5>
+        <div class="row g-3 mb-4" id="mdTopRow"></div>
 
         <div class="custom-card mb-4">
             <h5 class="chart-card-title" style="border-left-color:#e67e22;">MD 분류별 비중 표</h5>
@@ -650,9 +651,9 @@
     // 파일명 규칙: data/{key}_{year}.csv
     // ★ 표시 순서 고정: SK스토아 → 신세계TV쇼핑 → K쇼핑
     const COMPANIES = [
-        { key: 'sk',    name: 'SK스토아',     short: 'SK',  color: '#E67E22' },
-        { key: 'ssg',   name: '신세계TV쇼핑',  short: '신세계', color: '#E74C3C' },
-        { key: 'kshop', name: 'K쇼핑',        short: 'K쇼핑', color: '#3498DB' }
+        { key: 'sk',    name: 'SK스토아',     short: 'SK',   color: '#E67E22' },  // 주황
+        { key: 'ssg',   name: '신세계TV쇼핑',  short: '신세계', color: '#2E86DE' },  // 파랑
+        { key: 'kshop', name: 'K쇼핑',        short: 'K쇼핑', color: '#E74C3C' }   // 빨강
     ];
     const CO_BY_KEY = {};
     COMPANIES.forEach(c => CO_BY_KEY[c.key] = c);
@@ -682,7 +683,7 @@
     let brandTabFilteredData = [];
 
     const chartInstances = {
-        mdShare: null, topBrands: null, topItems: null, overviewMd: null
+        mdShare: null, topBrands: null, topItems: null
     };
 
     const COL = {
@@ -694,8 +695,9 @@
         CO_KEY: 24   // 프론트에서 부여 (파일에는 없음)
     };
 
-    const FILTER_IDS = ['mdClass', 'itemClass1', 'itemClass2', 'itemClass3', 'itemClass4', 'itemClass5'];
-    const FILTER_COLS = [COL.MD_CLS, COL.ITEM_CLS1, COL.ITEM_CLS2, COL.ITEM_CLS3, COL.ITEM_CLS4, COL.ITEM_CLS5];
+    // 세부 카테고리(대/중/소/세/세세)는 3사 체계가 달라 비교 불가 -> MD분류만 사용
+    const FILTER_IDS = ['mdClass'];
+    const FILTER_COLS = [COL.MD_CLS];
 
     Chart.defaults.font.family = "'Pretendard', sans-serif";
     Chart.defaults.color = '#2c3e50';
@@ -809,19 +811,10 @@
         // 회사별로 달라지는 것만 다시 만든다.
         // (기간/MD 옵션은 3사 합집합 기준이라 그대로 두어 선택 상태가 유지된다)
         resetDetailViews();
-        resetCascadingFilters();
         initDailyTab();
         initWeeklyTab();
         updateHeaderSub();
         renderSubTab();
-    }
-
-    function resetCascadingFilters() {
-        for (let i = 1; i < FILTER_IDS.length; i++) {
-            const sel = document.getElementById(FILTER_IDS[i]);
-            sel.innerHTML = '<option value="ALL">전체</option>';
-            sel.disabled = true;
-        }
     }
 
     function updateHeaderSub() {
@@ -919,10 +912,49 @@
     const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
 
     // ============================================================
+    // 편성 블록 본문 — 회사마다 쓸 수 있는 정보가 달라 표기를 나눈다
+    //   SK스토아 : 편성구분명(편성코드) — 브랜드/카테고리 체계가 없음
+    //   K쇼핑    : 브랜드명만           — 카테고리가 3사 비교 불가
+    //   신세계    : 브랜드 + 세분류       — 현행 유지
+    // ============================================================
+    function pgmBodyHtml(item) {
+        const key = item[COL.CO_KEY];
+        if (key === 'sk') {
+            return `<span class="pgm-brand-text">${item[COL.PGMG_NM] || item[COL.NAME] || '-'}</span>`;
+        }
+        if (key === 'kshop') {
+            return `<span class="pgm-brand-text">[${item[COL.BRAND] || '-'}]</span>`;
+        }
+        const cat = item[COL.ITEM_CLS4] || item[COL.ITEM_CLS3] || '';
+        return `<span class="pgm-brand-text">[${item[COL.BRAND]}]</span> ${cat}`;
+    }
+
+    // ============================================================
     // [3사 요약] 편성 비중 / 주력 브랜드 비교
     // ============================================================
-    const MD_ORDER = ['의류','언더웨어','잡화','뷰티','가전','주방','리빙','레포츠',
-                      '건강식품','일반식품','여행','보험','일반렌탈','대품렌탈','기타합계'];
+    // MD분류 표시 순서는 항상 SK스토아 가중분 내림차순.
+    // SK에 없는 분류는 3사 합계 기준으로 뒤에 붙인다.
+    let MD_ORDER = [];
+
+    function buildMdOrder(stats) {
+        const sk = (stats && stats['sk']) ? stats['sk'].md : {};
+        const all = {};
+        COMPANIES.forEach(co => {
+            const m = (stats && stats[co.key]) ? stats[co.key].md : {};
+            Object.keys(m).forEach(k => all[k] = (all[k] || 0) + m[k]);
+        });
+        const inSk = Object.keys(sk).filter(k => sk[k] > 0).sort((a, b) => sk[b] - sk[a]);
+        const rest = Object.keys(all).filter(k => !inSk.includes(k)).sort((a, b) => all[b] - all[a]);
+        MD_ORDER = inSk.concat(rest);
+        return MD_ORDER;
+    }
+
+    function globalMdOrder() {
+        if (MD_ORDER.length) return MD_ORDER;
+        const st = {};
+        COMPANIES.forEach(co => st[co.key] = aggregate(allData.filter(r => r[COL.CO_KEY] === co.key)));
+        return buildMdOrder(st);
+    }
 
     function companySlice(key) {
         // 요약 화면은 기간 + MD분류(0단계)까지만 적용한다.
@@ -932,7 +964,7 @@
     }
 
     function aggregate(rows) {
-        const md = {}, brand = {}, days = new Set();
+        const md = {}, brand = {}, brandMd = {}, days = new Set();
         let weight = 0;
         rows.forEach(r => {
             const w = getNum(r[COL.WEIGHT]);
@@ -940,19 +972,32 @@
             const m = r[COL.MD_CLS] || '기타합계';
             md[m] = (md[m] || 0) + w;
             const b = (r[COL.BRAND] || '').trim();
-            if (b && b !== '(브랜드없음)') brand[b] = (brand[b] || 0) + w;
+            if (b && b !== '(브랜드없음)') {
+                brand[b] = (brand[b] || 0) + w;
+                // 브랜드가 여러 분류에 걸칠 수 있어 가중분이 가장 큰 분류를 대표로 쓴다
+                if (!brandMd[b]) brandMd[b] = {};
+                brandMd[b][m] = (brandMd[b][m] || 0) + w;
+            }
             if (r[COL.DATE]) days.add(r[COL.DATE]);
         });
-        return { rows: rows.length, weight, md, brand, days: days.size };
+        return { rows: rows.length, weight, md, brand, brandMd, days: days.size };
+    }
+
+    function mainMdOf(st, brandName) {
+        const m = st.brandMd[brandName];
+        if (!m) return '';
+        return Object.keys(m).sort((a, b) => m[b] - m[a])[0] || '';
     }
 
     function renderOverview() {
         const stats = {};
         COMPANIES.forEach(co => stats[co.key] = aggregate(companySlice(co.key)));
 
+        buildMdOrder(stats);   // ★ SK스토아 가중분 내림차순으로 표시 순서 확정
+
         const periodText = document.getElementById('multiSelectAnchor').innerText || '전체';
         renderKpi(stats, periodText);
-        renderOverviewChart(stats);
+        renderMdTopRow(stats);
         renderShareTable(stats);
         renderBrandRow(stats);
     }
@@ -964,7 +1009,6 @@
             const st = stats[co.key];
             const topMd = Object.keys(st.md).sort((a, b) => st.md[b] - st.md[a])[0];
             const topShare = topMd && st.weight ? (st.md[topMd] / st.weight * 100).toFixed(1) : '0';
-            const perDay = st.days ? Math.round(st.weight / st.days) : 0;
             const col = document.createElement('div');
             col.className = 'col-lg-4 col-md-6';
             col.innerHTML = `
@@ -973,59 +1017,50 @@
                 <div class="kpi-period">${periodText}</div>
                 <div class="kpi-main">${Math.round(st.weight).toLocaleString()}<small>가중분</small></div>
                 <div class="kpi-grid">
-                  <div class="kpi-sub"><div class="kpi-sub-label">편성 건수</div>
-                       <div class="kpi-sub-val">${st.rows.toLocaleString()}건</div></div>
                   <div class="kpi-sub"><div class="kpi-sub-label">브랜드 수</div>
                        <div class="kpi-sub-val">${Object.keys(st.brand).length.toLocaleString()}개</div></div>
-                  <div class="kpi-sub"><div class="kpi-sub-label">일평균</div>
-                       <div class="kpi-sub-val">${perDay.toLocaleString()}분</div></div>
+                  <div class="kpi-sub"><div class="kpi-sub-label">주력 분류</div>
+                       <div class="kpi-sub-val">${topMd || '-'} <span class="text-muted" style="font-size:0.8rem;">${topShare}%</span></div></div>
                 </div>
-                <div class="kpi-top">주력 분류 · <b>${topMd || '-'}</b> ${topShare}%</div>
               </div>`;
             row.appendChild(col);
         });
     }
 
-    function renderOverviewChart(stats) {
-        const ctx = document.getElementById('chartOverviewMd').getContext('2d');
-        if (chartInstances.overviewMd) chartInstances.overviewMd.destroy();
-
-        // 어느 회사에서든 등장하는 분류만, 표준 순서대로
-        const labels = MD_ORDER.filter(m => COMPANIES.some(co => (stats[co.key].md[m] || 0) > 0));
-
-        const datasets = COMPANIES.map(co => {
+    function renderMdTopRow(stats) {
+        const row = document.getElementById('mdTopRow');
+        row.innerHTML = '';
+        COMPANIES.forEach(co => {
             const st = stats[co.key];
-            return {
-                label: co.name,
-                data: labels.map(m => st.weight ? +((st.md[m] || 0) / st.weight * 100).toFixed(2) : 0),
-                backgroundColor: co.color + 'CC',
-                borderColor: co.color,
-                borderWidth: 1,
-                borderRadius: 3
-            };
-        });
+            const top = Object.keys(st.md).sort((a, b) => st.md[b] - st.md[a]).slice(0, 5);
+            const max = top.length ? st.md[top[0]] : 1;
+            let items = top.map((m, i) => `
+                <div class="brand-rank-item ${i === 0 ? 'is-top' : ''}">
+                  <div class="brand-rank-no">${i + 1}</div>
+                  <div style="flex-grow:1; min-width:0;">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="md-chip" style="background:${MD_COLOR_MAP[m] || DEFAULT_COLOR}">${m}</span>
+                      <span class="brand-rank-val">${(st.md[m] / st.weight * 100).toFixed(1)}%</span>
+                    </div>
+                    <div class="brand-rank-bar" style="width:${(st.md[m] / max * 100).toFixed(0)}%"></div>
+                  </div>
+                  <div class="brand-rank-val">${Math.round(st.md[m]).toLocaleString()}분</div>
+                </div>`).join('');
+            if (!top.length) items = '<div class="text-muted small p-3 text-center">데이터 없음</div>';
 
-        chartInstances.overviewMd = new Chart(ctx, {
-            type: 'bar',
-            data: { labels, datasets },
-            options: {
-                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top', labels: { boxWidth: 14, font: { weight: '700' } } },
-                    datalabels: { display: false },
-                    tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.x}%` } }
-                },
-                scales: {
-                    x: { beginAtZero: true, grid: { color: '#f0f0f0' },
-                         ticks: { callback: v => v + '%' } },
-                    y: { grid: { display: false }, ticks: { font: { weight: '700' } } }
-                }
-            },
-            plugins: [ChartDataLabels]
+            const col = document.createElement('div');
+            col.className = 'col-lg-4 col-md-6';
+            col.innerHTML = `<div class="custom-card h-100" style="--co-color:${co.color}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="fw-bold mb-0" style="color:${co.color}">${co.name}</h6>
+                  <span class="text-muted" style="font-size:0.75rem;">${Object.keys(st.md).length}개 분류 운영</span>
+                </div>${items}</div>`;
+            row.appendChild(col);
         });
     }
 
     function renderShareTable(stats) {
+        // MD_ORDER는 buildMdOrder()가 SK 가중분 내림차순으로 이미 정렬해둔 상태
         const labels = MD_ORDER.filter(m => COMPANIES.some(co => (stats[co.key].md[m] || 0) > 0));
         const maxShare = Math.max(1, ...labels.map(m =>
             Math.max(...COMPANIES.map(co => stats[co.key].weight
@@ -1070,7 +1105,11 @@
                 <div class="brand-rank-item ${i === 0 ? 'is-top' : ''}">
                   <div class="brand-rank-no">${i + 1}</div>
                   <div style="flex-grow:1; min-width:0;">
-                    <div class="brand-rank-name" title="${b}">${b}</div>
+                    <div class="d-flex align-items-center gap-2" style="min-width:0;">
+                      <span class="brand-rank-name" title="${b}">${b}</span>
+                      ${(() => { const m = mainMdOf(st, b);
+                          return m ? `<span class="md-chip" style="background:${MD_COLOR_MAP[m] || DEFAULT_COLOR}">${m}</span>` : ''; })()}
+                    </div>
                     <div class="brand-rank-bar" style="width:${(st.brand[b] / max * 100).toFixed(0)}%"></div>
                   </div>
                   <div class="brand-rank-val">${Math.round(st.brand[b]).toLocaleString()}분</div>
@@ -1112,7 +1151,7 @@
 
         const mdSel = document.getElementById('allSchedMd');
         mdSel.innerHTML = '<option value="ALL" selected>전체 보기</option>';
-        MD_ORDER.filter(m => mds.has(m)).forEach(m => {
+        globalMdOrder().filter(m => mds.has(m)).forEach(m => {
             const o = document.createElement('option'); o.value = m; o.text = m; mdSel.appendChild(o);
         });
     }
@@ -1154,9 +1193,7 @@
                           </div>
                           <span class="pgm-weight">${Math.round(getNum(it[COL.WEIGHT]))}</span>
                         </div>
-                        <div class="pgm-row-bottom">
-                          <span class="pgm-brand-text">[${it[COL.BRAND]}]</span> ${it[COL.NAME] || ''}
-                        </div></div>`;
+                        <div class="pgm-row-bottom">${pgmBodyHtml(it)}</div></div>`;
                 }).join('') + '</td>';
             });
             tbody.insertAdjacentHTML('beforeend', html + '</tr>');
@@ -1265,9 +1302,6 @@
                     const link = item[COL.LINK] || '#';
                     const weight = Math.round(item[COL.WEIGHT]);
 
-                    // 요약: [브랜드] 카테고리(4차) 또는 3차
-                    const catSummary = item[COL.ITEM_CLS4] || item[COL.ITEM_CLS3] || '';
-
                     cellContent += `
                         <div class="pgm-block" data-md="${md}" onclick="window.open('${link}', '_blank')">
                             <div class="pgm-row-top">
@@ -1278,9 +1312,7 @@
                                 </div>
                                 <span class="pgm-weight">${weight}</span>
                             </div>
-                            <div class="pgm-row-bottom">
-                                <span class="pgm-brand-text">[${item[COL.BRAND]}]</span> ${catSummary}
-                            </div>
+                            <div class="pgm-row-bottom">${pgmBodyHtml(item)}</div>
                         </div>
                     `;
                 });
@@ -1486,28 +1518,6 @@
         const uniqueValues = new Set();
         (dataset || rawData).forEach(r => { if(r[mdCol]) uniqueValues.add(r[mdCol]); });
         populateSelect(document.getElementById(FILTER_IDS[0]), Array.from(uniqueValues).sort());
-    }
-
-    function updateCascadingFilters(changedLevel) {
-      for(let i = changedLevel + 1; i < FILTER_IDS.length; i++) {
-        const sel = document.getElementById(FILTER_IDS[i]);
-        sel.innerHTML = '<option value="ALL">전체</option>'; sel.disabled = true;
-      }
-      const currentVal = document.getElementById(FILTER_IDS[changedLevel]).value;
-      if (currentVal === 'ALL') { onFilterChanged(); return; }
-      let validRows = rawData;
-      for(let i=0; i <= changedLevel; i++) {
-        const val = document.getElementById(FILTER_IDS[i]).value;
-        if(val !== 'ALL') validRows = validRows.filter(r => r[FILTER_COLS[i]] === val);
-      }
-      if (changedLevel < FILTER_IDS.length - 1) {
-        const nextLevel = changedLevel + 1; const nextCol = FILTER_COLS[nextLevel]; const nextValues = new Set();
-        validRows.forEach(r => { if(r[nextCol]) nextValues.add(r[nextCol]); });
-        const nextSelect = document.getElementById(FILTER_IDS[nextLevel]);
-        populateSelect(nextSelect, Array.from(nextValues).sort());
-        if(nextValues.size > 0) nextSelect.disabled = false;
-      }
-      onFilterChanged();
     }
 
     function populateSelect(selectEl, list) {
