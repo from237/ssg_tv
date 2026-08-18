@@ -239,6 +239,19 @@
     .brand-rank-bar { height: 4px; border-radius: 2px; background: var(--co-color); opacity: 0.25;
                       margin-top: 3px; }
 
+    .map-table th, .map-table td { vertical-align: middle; padding: 9px 10px; font-size: 0.85rem; }
+    .map-table th { background: #f8f9fa; font-weight: 700; color: #495057; text-align: center;
+                    border-bottom: 2px solid #dee2e6; white-space: nowrap; }
+    .map-table td.unified-cell { white-space: nowrap; width: 120px; }
+    .src-tag { display: inline-block; padding: 2px 8px; margin: 2px 3px 2px 0; border-radius: 5px;
+               background: #f1f3f5; color: #495057; font-size: 0.78rem; font-weight: 600;
+               border: 1px solid #e4e8ec; }
+    .src-none { color: #ced4da; font-size: 0.8rem; font-style: italic; }
+    .rule-card { background: #fff; border-radius: var(--radius-md); box-shadow: var(--soft-shadow);
+                 padding: 18px 20px; margin-bottom: 14px; border-left: 4px solid #f39c12; }
+    .rule-title { font-weight: 800; color: #2c3e50; font-size: 0.95rem; margin-bottom: 3px; }
+    .rule-desc { font-size: 0.85rem; color: #7f8c8d; margin-bottom: 10px; }
+
     .md-chip { display: inline-block; padding: 1px 7px; border-radius: 20px; color: #fff;
                font-size: 0.68rem; font-weight: 800; white-space: nowrap; flex-shrink: 0;
                box-shadow: 0 1px 3px rgba(0,0,0,0.12); letter-spacing: -0.02em; }
@@ -296,6 +309,11 @@
         <div class="nav-item">
             <button class="nav-link w-100" id="tab-detail-btn" onclick="switchTab('tab-detail')">
                 <i class="bi bi-search me-2"></i>회사별 상세분석
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link w-100" id="tab-mapping-btn" onclick="switchTab('tab-mapping')">
+                <i class="bi bi-diagram-3-fill me-2"></i>3사 분류표
             </button>
         </div>
     </div>
@@ -425,6 +443,28 @@
                 </table>
             </div>
         </div>
+    </div>
+
+    <!-- ============ 3사 분류표 ============ -->
+    <div id="tab-mapping" class="fade-in" style="display:none;">
+        <div class="custom-card mb-4" style="border-left:5px solid #3498db; padding:15px 20px;">
+          <div class="d-flex align-items-center gap-3">
+            <i class="bi bi-info-circle-fill text-primary fs-5"></i>
+            <div class="text-secondary fw-medium" style="font-size:0.9rem;">
+              3사의 원본 MD분류를 SK스토아 기준 통합 분류로 치환한 표입니다.
+              <span id="mappingStamp" class="text-muted"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="custom-card mb-4">
+          <h5 class="chart-card-title">통합 분류 매핑</h5>
+          <div class="table-responsive">
+            <table class="table table-sm map-table mb-0" id="mappingTable"></table>
+          </div>
+        </div>
+
+        <div id="mappingRules"></div>
     </div>
 
     <div id="tab-detail" style="display:none;">
@@ -849,6 +889,7 @@
     function renderCurrentTab() {
         if (currentTab === 'overview') renderOverview();
         else if (currentTab === 'allsched') renderAllSchedule();
+        else if (currentTab === 'mapping') renderMappingTab();
         else if (currentTab === 'detail') renderSubTab();
     }
 
@@ -856,7 +897,7 @@
       document.querySelectorAll('#mainTab .nav-link').forEach(el => el.classList.remove('active'));
       document.getElementById(tabId + '-btn').classList.add('active');
 
-      ['tab-overview', 'tab-allsched', 'tab-detail'].forEach(id => {
+      ['tab-overview', 'tab-allsched', 'tab-detail', 'tab-mapping'].forEach(id => {
           document.getElementById(id).style.display = 'none';
       });
       document.getElementById(tabId).style.display = 'block';
@@ -872,6 +913,9 @@
       } else if (currentTab === 'allsched') {
           document.getElementById('filterArea').style.display = 'none';
           renderAllSchedule();
+      } else if (currentTab === 'mapping') {
+          document.getElementById('filterArea').style.display = 'none';
+          renderMappingTab();
       } else {
           // 하위 탭 표시 상태와 필터 노출은 switchSubTab이 전부 책임진다
           if (!currentCompany) {
@@ -910,6 +954,75 @@
     }
 
     const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
+
+    // ============================================================
+    // [3사 분류표] md_mapping.json 을 그대로 표로 그린다.
+    // 파이썬 매핑이 단일 원본이라, 규칙이 바뀌면 이 화면도 자동으로 따라온다.
+    // ============================================================
+    let mappingData = null;
+
+    async function renderMappingTab() {
+        const table = document.getElementById('mappingTable');
+        const rulesEl = document.getElementById('mappingRules');
+
+        if (!mappingData) {
+            table.innerHTML = '<tbody><tr><td class="text-muted p-4 text-center">분류표 불러오는 중...</td></tr></tbody>';
+            try {
+                const res = await fetch(GITHUB_BASE_URL.replace(/data\/$/, '') + 'md_mapping.json');
+                if (!res.ok) throw new Error(res.status);
+                mappingData = await res.json();
+            } catch (e) {
+                table.innerHTML = `<tbody><tr><td class="text-muted p-4 text-center">
+                    md_mapping.json 을 불러오지 못했습니다.<br>
+                    <span style="font-size:0.8rem;">run_all.py 를 실행하면 저장소 루트에 생성됩니다.</span>
+                    </td></tr></tbody>`;
+                rulesEl.innerHTML = '';
+                return;
+            }
+        }
+
+        const cos = mappingData['회사'];
+        const stamp = (mappingData['생성일시'] || '').slice(0, 10);
+        document.getElementById('mappingStamp').textContent = stamp ? ` (기준일 ${stamp})` : '';
+
+        let html = '<thead><tr><th style="width:120px;">통합 분류</th>';
+        cos.forEach(c => {
+            const co = CO_BY_KEY[c.key];
+            html += `<th style="color:${co ? co.color : '#495057'}">${c.name}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+
+        mappingData['매핑'].forEach(row => {
+            const u = row.unified;
+            html += `<tr><td class="unified-cell">
+                <span class="trend-md-badge" style="background-color:${MD_COLOR_MAP[u] || DEFAULT_COLOR}">${u}</span></td>`;
+            ['SK', 'SSG', 'KSHOP'].forEach(k => {
+                const list = row.src[k] || [];
+                html += '<td>' + (list.length
+                    ? list.map(v => `<span class="src-tag">${v}</span>`).join('')
+                    : '<span class="src-none">해당 분류 없음</span>') + '</td>';
+            });
+            html += '</tr>';
+        });
+        html += '</tbody>';
+        table.innerHTML = html;
+
+        rulesEl.innerHTML = '<h5 class="mb-3 fw-bold text-dark">' +
+            '<i class="bi bi-funnel-fill text-warning me-2"></i>추가 재분류 규칙</h5>' +
+            (mappingData['특수규칙'] || []).map(r => {
+                const detail = r['상세'] || {};
+                const body = Object.keys(detail).map(k => {
+                    const v = detail[k];
+                    const txt = Array.isArray(v) ? v.join(', ') : v;
+                    return `<span class="src-tag">${k} → ${txt}</span>`;
+                }).join('');
+                return `<div class="rule-card">
+                    <div class="rule-title">${r['대상']}</div>
+                    <div class="rule-desc">${r['설명']}</div>
+                    <div>${body}</div>
+                </div>`;
+            }).join('');
+    }
 
     // ============================================================
     // 편성 블록 본문 — 회사마다 쓸 수 있는 정보가 달라 표기를 나눈다
