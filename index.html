@@ -2,190 +2,438 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>S사 방송상품 운영요약</title>
+  <title>T커머스 3사 방송상품 운영 현황</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-  
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 
   <style>
+    /* ============================================================
+       T커머스 3사 방송상품 운영 현황
+       디자인 재료는 '편성표' — 24시간 그리드, 채널 레인, 분 단위 눈금.
+       그래서 규칙은 세 가지뿐이다.
+         1. 면은 흰색, 경계는 1px 헤어라인. 그림자는 한 종류만.
+         2. 3사는 어디서나 같은 색·같은 순서(SK-신세계-K쇼핑)로 흐른다.
+         3. 숫자는 전부 tabular-nums 로 자릿수를 맞춘다.
+       ============================================================ */
     :root {
-      --primary-color: #34495e;
-      --accent-color: #3498db; 
-      --bg-color: #f4f6f9;
-      --card-bg: #ffffff;
-      --text-main: #2c3e50;
-      --soft-shadow: 0 5px 15px rgba(0,0,0,0.05);
-      --hover-shadow: 0 10px 25px rgba(0,0,0,0.1);
-      --radius-md: 12px;
-      --radius-sm: 8px;
+      /* 면 */
+      --canvas:      #F4F5F7;
+      --surface:     #FFFFFF;
+      --surface-alt: #FAFBFC;
+      --hairline:    #E3E6EB;
+      --hairline-2:  #D3D8E0;
+
+      /* 글자 */
+      --ink:      #0F172A;
+      --ink-2:    #475569;
+      --ink-3:    #7C8798;
+      --ink-4:    #A9B2C0;
+
+      /* 강조 */
+      --accent:   #2E86DE;
+      --accent-soft: #EAF3FC;
+
+      /* 3사 레인 — 순서 고정: SK → 신세계 → K쇼핑 */
+      --co-sk:    #E67E22;
+      --co-ssg:   #2E86DE;
+      --co-k:     #E74C3C;
+
+      --shadow:   0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+      --shadow-up:0 4px 12px rgba(15,23,42,.09);
+      --r-lg: 12px;
+      --r-md: 9px;
+      --r-sm: 6px;
     }
-    
-    body { font-family: 'Pretendard', sans-serif; background-color: var(--bg-color); color: var(--text-main); padding-bottom: 50px; letter-spacing: -0.02em; }
-    
-    .dashboard-header { 
-      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-      padding: 40px 0; 
-      margin-bottom: 30px; 
+
+    * { -webkit-font-smoothing: antialiased; }
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--canvas);
+      color: var(--ink);
+      letter-spacing: -0.011em;
+      padding-bottom: 64px;
+      font-size: 14px;
+    }
+    /* 숫자는 전부 자릿수 정렬 */
+    table, .kpi-main, .kpi-sub-val, .pgm-weight, .brand-rank-val,
+    .search-stat-value, .stat-main-text, .stack-seg, .trend-percent {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+    }
+
+    /* ---------- 헤더 ---------- */
+    .dashboard-header {
+      background: #131C2E;
+      padding: 26px 0 0;
+      margin-bottom: 22px;
       color: #fff;
-      box-shadow: 0 4px 20px rgba(30, 60, 114, 0.2);
+      position: relative;
     }
-    .header-title { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    
-    .nav-pills { background: #e9ecef; padding: 5px; border-radius: 50px; display: inline-flex; width: 100%; margin-bottom: 20px; }
-    .nav-item { flex: 1; text-align: center; }
-    .nav-link { border-radius: 50px; color: #7f8c8d; font-weight: 600; padding: 10px 15px; transition: all 0.3s ease; font-size: 0.95rem; }
-    .nav-link.active { background-color: var(--card-bg); color: var(--accent-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); font-weight: 800; }
+    /* 시그니처: 헤더 아래 3사 레인 */
+    .dashboard-header::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+      background: linear-gradient(to right,
+        var(--co-sk) 0 33.333%, var(--co-ssg) 33.333% 66.666%, var(--co-k) 66.666% 100%);
+    }
+    .header-title { font-size: 1.32rem; font-weight: 800; letter-spacing: -0.03em; margin: 0; }
+    .header-sub {
+      font-size: 0.78rem; color: #94A3B8; font-weight: 500;
+      letter-spacing: 0; margin-top: 5px; padding-bottom: 22px;
+    }
+    .header-sub b { color: #E2E8F0; font-weight: 700; }
 
-    .custom-card { background: var(--card-bg); border-radius: var(--radius-md); border: none; box-shadow: var(--soft-shadow); padding: 20px; margin-bottom: 20px; transition: transform 0.2s, box-shadow 0.2s; }
-    
-    .filter-pastel {
-        background: linear-gradient(145deg, #f0f8ff, #e6f2ff);
-        border: 1px solid #d6e9f9;
+    /* ---------- 탭 ---------- */
+    .nav-pills {
+      background: transparent; padding: 0; border-radius: 0;
+      display: flex; width: 100%; margin-bottom: 16px;
+      gap: 2px; border-bottom: 1px solid var(--hairline);
+    }
+    .nav-item { flex: 0 1 auto; }
+    .nav-link {
+      border-radius: 0; color: var(--ink-3); font-weight: 700;
+      padding: 11px 18px; font-size: 0.875rem; background: none;
+      border: none; border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s; white-space: nowrap;
+    }
+    .nav-link:hover { color: var(--ink); }
+    .nav-link.active {
+      background: none; color: var(--ink);
+      border-bottom-color: var(--ink); font-weight: 800; box-shadow: none;
+    }
+    .sub-pills { background: transparent; margin-bottom: 18px; border-bottom: 1px solid var(--hairline); }
+    .sub-pills .nav-link { font-size: 0.82rem; padding: 9px 14px; }
+    .sub-pills .nav-link.active { border-bottom-color: var(--accent); color: var(--accent); }
+
+    /* ---------- 카드 ---------- */
+    .custom-card {
+      background: var(--surface); border-radius: var(--r-lg);
+      border: 1px solid var(--hairline); box-shadow: var(--shadow);
+      padding: 18px 20px; margin-bottom: 16px;
     }
 
-    .filter-label { font-size: 0.8rem; font-weight: 700; color: #5a6b7c; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .form-select, .form-control { border-radius: var(--radius-sm); border: 1px solid #cbd5e0; padding: 8px 12px; font-size: 0.9rem; background-color: #fff; }
-    .form-select:focus, .form-control:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
+    /* 모든 탭이 공유하는 섹션 제목 */
+    .chart-card-title {
+      font-size: 0.94rem; font-weight: 800; color: var(--ink);
+      margin: 0 0 14px; padding: 0; border: none; letter-spacing: -0.02em;
+    }
+    .chart-card-title::before {
+      content: ""; display: inline-block; width: 3px; height: 13px;
+      background: var(--ink); border-radius: 2px;
+      margin-right: 8px; vertical-align: -1px;
+    }
+    h5.mb-3.fw-bold, .section-head {
+      font-size: 0.94rem !important; font-weight: 800 !important;
+      color: var(--ink); letter-spacing: -0.02em; margin-bottom: 12px !important;
+    }
+
+    /* ---------- 필터 ---------- */
+    .filter-pastel { background: var(--surface); border: 1px solid var(--hairline); }
+    .filter-label {
+      font-size: 0.68rem; font-weight: 800; color: var(--ink-3);
+      margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .form-select, .form-control {
+      border-radius: var(--r-sm); border: 1px solid var(--hairline-2);
+      padding: 7px 11px; font-size: 0.85rem; background-color: var(--surface);
+      color: var(--ink); height: auto;
+    }
+    .form-select:focus, .form-control:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+    }
 
     .dropdown-check-list { position: relative; width: 100%; }
     .dropdown-check-list .anchor {
-        position: relative; cursor: pointer; display: block;
-        padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: var(--radius-sm);
-        background: #fff; font-size: 0.9rem; color: #2c3e50;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      position: relative; cursor: pointer; display: block; padding: 7px 11px;
+      border: 1px solid var(--hairline-2); border-radius: var(--r-sm);
+      background: var(--surface); font-size: 0.85rem; color: var(--ink);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .dropdown-check-list .anchor:after {
-        position: absolute; content: ""; border-left: 2px solid black; border-top: 2px solid black;
-        padding: 3px; right: 15px; top: 35%; transform: rotate(-135deg);
+      position: absolute; content: ""; border-left: 1.5px solid var(--ink-3);
+      border-top: 1.5px solid var(--ink-3); padding: 3px; right: 13px; top: 36%;
+      transform: rotate(-135deg);
     }
-    .dropdown-check-list:active .anchor:after { transform: rotate(-45deg); }
-    
     .dropdown-check-list ul.items {
-        padding: 10px; display: none; margin: 0; border: 1px solid #cbd5e0;
-        border-top: none; position: absolute; top: 100%; left: 0; width: 100%; z-index: 1000;
-        background: #fff; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-        max-height: 300px; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+      padding: 8px; display: none; margin: 0; border: 1px solid var(--hairline-2);
+      border-top: none; position: absolute; top: 100%; left: 0; width: 100%; z-index: 1000;
+      background: var(--surface); border-radius: 0 0 var(--r-sm) var(--r-sm);
+      max-height: 290px; overflow-y: auto; box-shadow: var(--shadow-up);
     }
     .dropdown-check-list ul.items.visible { display: block; }
-    .dropdown-check-list ul.items li { list-style: none; margin-bottom: 5px; font-size: 0.9rem; display: flex; align-items: center; }
-    .dropdown-check-list ul.items li:last-child { margin-bottom: 0; }
-    .dropdown-check-list ul.items li input { margin-right: 8px; width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent-color); }
+    .dropdown-check-list ul.items li {
+      list-style: none; margin-bottom: 3px; font-size: 0.85rem;
+      display: flex; align-items: center; padding: 2px 4px; border-radius: 4px;
+    }
+    .dropdown-check-list ul.items li:hover { background: var(--surface-alt); }
+    .dropdown-check-list ul.items li input {
+      margin-right: 8px; width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent);
+    }
     .dropdown-check-list ul.items li label { cursor: pointer; width: 100%; }
-    
-    .brand-row { background: var(--card-bg); border-radius: var(--radius-md); padding: 15px 25px; margin-bottom: 10px; cursor: pointer; border: 1px solid transparent; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--soft-shadow); transition: all 0.2s ease; }
-    .brand-row:hover { transform: translateY(-3px); box-shadow: var(--hover-shadow); border-color: var(--accent-color); }
-    .rank-badge { width: 30px; height: 30px; background: #ecf0f1; color: #95a5a6; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; margin-right: 15px; font-size: 1rem; }
-    .top-rank .rank-badge { background: linear-gradient(135deg, #3498db, #2980b9); color: #fff; box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); }
-    .brand-name { font-size: 1.1rem; }
 
-    .item-card { border: none; border-radius: var(--radius-md); overflow: hidden; background: #fff; display: flex; flex-direction: column; box-shadow: var(--soft-shadow); transition: transform 0.2s; }
-    .item-card:hover { transform: translateY(-5px); box-shadow: var(--hover-shadow); }
-    .card-img-wrapper { position: relative; padding-top: 45%; background: #fff; }
-    .card-img-top { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; padding: 10px; }
-    .big-rank-badge { position: absolute; top: 0; left: 0; width: 40px; height: 40px; background: rgba(44, 62, 80, 0.9); color: #fff; font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; border-bottom-right-radius: 14px; }
-    .card-body { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
-    .category-badge { font-size: 0.75rem; padding: 3px 8px; margin-bottom: 6px; }
-    .card-title { font-size: 1rem; margin-bottom: 10px; }
-    .item-stats-display { margin-bottom: 12px; padding: 0; background: none; border-radius: 0; text-align: left; }
-    .price-sub { font-size: 0.85rem; color: #7f8c8d; margin-bottom: 4px; font-weight: 600; }
-    .stat-main-text { font-size: 1.1rem; font-weight: 800; color: #2c3e50; display: flex; align-items: center; justify-content: space-between; }
-    .stat-unit { font-size: 0.8rem; font-weight: normal; color: #95a5a6; margin-left: 2px; }
-    .btn-group-custom { gap: 8px; margin-top: 0; }
-    .btn-custom { padding: 6px 0; font-size: 0.85rem; }
+    /* ---------- 회사 선택 ---------- */
+    .co-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .co-btn {
+      flex: 1; min-width: 138px; border: 1px solid var(--hairline);
+      background: var(--surface); border-radius: var(--r-md); padding: 11px 14px;
+      cursor: pointer; transition: border-color .15s, box-shadow .15s;
+      text-align: left; position: relative; box-shadow: var(--shadow);
+      font-family: inherit; border-top: 3px solid var(--hairline-2);
+    }
+    .co-btn:hover:not(:disabled) { border-color: var(--hairline-2); box-shadow: var(--shadow-up); }
+    .co-btn .co-name { font-weight: 800; font-size: 0.9rem; color: var(--ink-2); display: block; }
+    .co-btn .co-meta { font-size: 0.72rem; color: var(--ink-4); font-weight: 600; }
+    .co-btn .co-dot { display: none; }
+    .co-btn.active { border-top-color: var(--co-color); background: var(--surface); }
+    .co-btn.active .co-name { color: var(--co-color); }
+    .co-btn:disabled { opacity: .45; cursor: not-allowed; }
 
-    .timeline-item { display: flex; gap: 15px; margin-bottom: 20px; align-items: stretch; }
-    .time-column { flex: 0 0 80px; display: flex; flex-direction: column; align-items: center; padding-top: 12px; }
-    .time-badge { background: #34495e; color: #fff; padding: 6px 14px; border-radius: 30px; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(44, 62, 80, 0.3); z-index: 2; }
-    .time-line-deco { width: 3px; background: #e0e6ed; flex-grow: 1; margin-top: 5px; margin-bottom: -30px; border-radius: 2px; }
-    .timeline-item:last-child .time-line-deco { display: none; }
-    .schedule-card { flex-grow: 1; background: #ffffff; border-radius: var(--radius-md); overflow: hidden; display: flex; box-shadow: var(--soft-shadow); border: 1px solid rgba(0,0,0,0.03); transition: all 0.2s; }
-    .schedule-card:hover { transform: translateX(5px); border-color: var(--accent-color); }
-    .sc-thumb-box { width: 140px; height: auto; min-height: 140px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; padding: 10px; }
-    .sc-thumb-img { max-width: 100%; max-height: 120px; object-fit: contain; mix-blend-mode: multiply; }
-    .sc-info-box { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(to right, #ffffff, #fafbfc); }
+    /* ---------- KPI ---------- */
+    .kpi-card {
+      border-radius: var(--r-lg); background: var(--surface);
+      border: 1px solid var(--hairline); border-top: 3px solid var(--co-color);
+      box-shadow: var(--shadow); padding: 16px 18px; height: 100%;
+    }
+    .kpi-co { font-weight: 800; font-size: 0.92rem; color: var(--co-color); margin-bottom: 1px; }
+    .kpi-period { font-size: 0.7rem; color: var(--ink-4); font-weight: 600; margin-bottom: 12px; }
+    .kpi-main { font-size: 1.6rem; font-weight: 800; color: var(--ink); line-height: 1.05; letter-spacing: -0.03em; }
+    .kpi-main small { font-size: 0.72rem; color: var(--ink-3); font-weight: 700; margin-left: 4px; letter-spacing: 0; }
+    .kpi-grid { display: flex; gap: 16px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--hairline); }
+    .kpi-sub { flex: 1; min-width: 0; }
+    .kpi-sub-label { font-size: 0.66rem; color: var(--ink-4); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+    .kpi-sub-val { font-size: 0.9rem; font-weight: 700; color: var(--ink-2); margin-top: 1px; }
+    .kpi-top { margin-top: 9px; font-size: 0.76rem; color: var(--ink-3); }
+    .kpi-top b { color: var(--ink); }
 
-    .history-table-container { border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--soft-shadow); border: 1px solid #eee; }
-    .history-table th { background: #f8f9fa; border-bottom: 2px solid #e9ecef; color: #495057; font-weight: 700; padding: 12px 15px; font-size: 0.85rem; white-space: nowrap; vertical-align: middle; }
-    .history-table td { padding: 12px 15px; vertical-align: middle; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem; color: #333; }
-    .text-truncate-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
-
-    .search-stat-box { background: #eaf4fc; border-radius: var(--radius-md); padding: 20px; display: flex; justify-content: center; gap: 50px; align-items: center; margin-bottom: 20px; border: 1px solid #d6e9f9; }
-    .search-stat-item { text-align: center; }
-    .search-stat-label { font-size: 0.85rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
-    .search-stat-value { font-size: 1.5rem; font-weight: 800; color: #2c3e50; }
-
-    .chart-container { position: relative; height: 300px; width: 100%; }
-    .chart-card-title { font-size: 1.1rem; font-weight: 700; color: #2c3e50; margin-bottom: 15px; border-left: 4px solid var(--accent-color); padding-left: 10px; }
-    
-    .trend-table th { background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; color: #495057; font-weight: 700; font-size: 0.8rem; padding: 8px 4px; text-align: center; }
-    .trend-table td { vertical-align: middle; border-bottom: 1px solid #f1f1f1; font-size: 0.85rem; padding: 6px 4px; }
-    .trend-table td:first-child { white-space: nowrap; letter-spacing: -0.5px; font-weight: 600; color: #555; }
-    .trend-md-badge { display: inline-block; padding: 4px 2px; border-radius: 6px; color: #fff; font-weight: 700; font-size: 0.75rem; margin-bottom: 1px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .trend-percent { font-size: 0.75rem; color: #6c757d; font-weight: 600; display: block; margin-top: 1px; }
-
-    /* [주간 편성표 스타일 개선: 컴팩트 버전] */
-    .schedule-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
-    /* 가로줄 더 진하게 */
-    .schedule-table th, .schedule-table td { border: 1px solid #ced4da; padding: 3px; vertical-align: top; font-size: 0.8rem; border-bottom-color: #adb5bd; border-bottom-width: 1px; }
-    .schedule-table th { background: #f8f9fa; text-align: center; font-weight: 700; padding: 10px; color: #495057; border-bottom-width: 2px; }
-
-    .schedule-table td { height: auto; position: relative; transition: background 0.2s; }
-    /* 짝수 시간대 음영 */
-    .even-row td { background-color: #f8f9fa; }
-    .schedule-table td:hover { background-color: #e9ecef !important; }
-
-    /* PGM 블록: 아주 작고 심플하게 */
-    .pgm-block { display: block; background: #fff; border: 1px solid #e9ecef; border-radius: 4px; padding: 4px; margin-bottom: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: all 0.1s; cursor: pointer; text-decoration: none; color: inherit; }
-    .pgm-block:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.1); border-color: var(--accent-color); z-index: 10; position: relative; }
-
-    /* 1번째 줄: 시간 + 뱃지들 + 가중분 */
-    .pgm-row-top { display: flex; align-items: center; justify-content: space-between; font-size: 0.7rem; margin-bottom: 2px; }
-    .pgm-time-info { display: flex; align-items: center; gap: 3px; color: #333; font-weight: 800; }
-
-    /* 뱃지 스타일 */
-    .pgm-badge { font-size: 0.6rem; padding: 1px 3px; border-radius: 3px; font-weight: 700; line-height: 1; }
-    .pgm-badge-ch { background: #f1f3f5; color: #495057; border: 1px solid #dee2e6; }
-    .pgm-badge-md { color: #fff; }
-
-    /* 가중분 (우측) */
-    .pgm-weight { font-weight: 800; color: var(--accent-color); font-size: 0.7rem; }
-
-    /* 2번째 줄: [브랜드] 카테고리 (한 줄 처리) */
-    .pgm-row-bottom { font-size: 0.75rem; color: #495057; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
-    .pgm-brand-text { font-weight: 800; color: #2c3e50; margin-right: 2px; }
-
-    .pgm-dimmed { opacity: 0.1; filter: grayscale(100%); }
-
-    .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
-
-    .fade-in { animation: fadeIn 0.4s ease-in-out; }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+    /* ---------- 순위 목록 (주력분류 / 주력브랜드 공용) ---------- */
+    .brand-rank-item {
+      display: flex; align-items: center; gap: 9px; padding: 7px 0;
+      border-bottom: 1px solid var(--hairline);
+    }
+    .brand-rank-item:last-child { border-bottom: none; }
+    .brand-rank-no {
+      width: 19px; height: 19px; border-radius: 4px; background: var(--surface-alt);
+      color: var(--ink-4); font-size: 0.68rem; font-weight: 800; display: flex;
+      align-items: center; justify-content: center; flex-shrink: 0;
+      border: 1px solid var(--hairline);
+    }
+    .brand-rank-item.is-top .brand-rank-no { background: var(--co-color); color: #fff; border-color: transparent; }
+    .brand-rank-name {
+      font-size: 0.85rem; font-weight: 700; color: var(--ink);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 0;
+    }
+    .brand-rank-val { font-size: 0.75rem; color: var(--ink-3); font-weight: 700; flex-shrink: 0; }
+    .brand-rank-bar { height: 3px; border-radius: 2px; background: var(--co-color); opacity: .3; margin-top: 4px; }
+    .md-chip {
+      display: inline-block; padding: 1px 7px; border-radius: 4px; color: #fff;
+      font-size: 0.67rem; font-weight: 800; white-space: nowrap; flex-shrink: 0;
+      letter-spacing: -0.02em;
     }
 
+    /* ---------- 표 공용 ---------- */
+    table { color: var(--ink); }
+    .share-table th, .share-table td,
+    .map-table th, .map-table td,
+    .trend-table th, .trend-table td,
+    .history-table th, .history-table td { border-color: var(--hairline) !important; }
+
+    .share-table th { background: var(--surface-alt); font-weight: 800; color: var(--ink-3);
+                      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+                      text-align: center; padding: 9px 6px; border-bottom: 1px solid var(--hairline-2); }
+    .share-table td { padding: 7px 6px; text-align: center; vertical-align: middle; }
+    .share-table td.md-cell { text-align: left; white-space: nowrap; }
+
+    .stack-bar {
+      display: flex; width: 100%; height: 24px; border-radius: var(--r-sm);
+      overflow: hidden; background: var(--surface-alt);
+      border: 1px solid var(--hairline);
+    }
+    .stack-seg {
+      display: flex; align-items: center; justify-content: center; color: #fff;
+      font-size: 0.72rem; font-weight: 800; letter-spacing: -0.02em;
+      transition: filter .15s; overflow: hidden; white-space: nowrap;
+    }
+    .stack-seg:hover { filter: brightness(1.1); }
+
+    .map-table th { background: var(--surface-alt); font-weight: 800; color: var(--ink-3);
+                    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+                    text-align: center; padding: 9px 10px; border-bottom: 1px solid var(--hairline-2); }
+    .map-table td { vertical-align: middle; padding: 9px 10px; font-size: 0.82rem; }
+    .map-table td.unified-cell { white-space: nowrap; width: 118px; }
+    .src-tag {
+      display: inline-block; padding: 2px 7px; margin: 2px 3px 2px 0; border-radius: 4px;
+      background: var(--surface-alt); color: var(--ink-2); font-size: 0.75rem;
+      font-weight: 600; border: 1px solid var(--hairline);
+    }
+    .src-none { color: var(--ink-4); font-size: 0.78rem; }
+    .rule-card {
+      background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow);
+      border: 1px solid var(--hairline); border-left: 3px solid var(--co-sk);
+      padding: 15px 18px; margin-bottom: 12px;
+    }
+    .rule-title { font-weight: 800; color: var(--ink); font-size: 0.88rem; margin-bottom: 2px; }
+    .rule-desc { font-size: 0.8rem; color: var(--ink-3); margin-bottom: 9px; }
+
+    .trend-table th { background: var(--surface-alt); color: var(--ink-3); font-weight: 800;
+                      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+                      padding: 9px 4px; text-align: center; }
+    .trend-table td { vertical-align: middle; font-size: 0.82rem; padding: 6px 4px; }
+    .trend-table td:first-child { white-space: nowrap; font-weight: 700; color: var(--ink-2); }
+    .trend-md-badge {
+      display: inline-block; padding: 3px 6px; border-radius: 4px; color: #fff;
+      font-weight: 800; font-size: 0.72rem; width: 100%; text-align: center;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.02em;
+    }
+    .trend-percent { font-size: 0.72rem; color: var(--ink-3); font-weight: 700; display: block; margin-top: 2px; }
+
+    .history-table-container { border-radius: var(--r-lg); overflow: hidden;
+                               box-shadow: var(--shadow); border: 1px solid var(--hairline); }
+    .history-table th { background: var(--surface-alt); color: var(--ink-3); font-weight: 800;
+                        padding: 10px 14px; font-size: 0.7rem; white-space: nowrap;
+                        text-transform: uppercase; letter-spacing: 0.05em;
+                        border-bottom: 1px solid var(--hairline-2); }
+    .history-table td { padding: 10px 14px; vertical-align: middle; font-size: 0.84rem; color: var(--ink-2); }
+    .text-truncate-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                       overflow: hidden; white-space: normal; }
+
+    /* ---------- 브랜드/상품 ---------- */
+    .brand-row {
+      background: var(--surface); border-radius: var(--r-md); padding: 13px 18px;
+      margin-bottom: 7px; cursor: pointer; border: 1px solid var(--hairline);
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: var(--shadow); transition: border-color .15s, box-shadow .15s;
+    }
+    .brand-row:hover { box-shadow: var(--shadow-up); border-color: var(--hairline-2); }
+    .rank-badge {
+      width: 26px; height: 26px; background: var(--surface-alt); color: var(--ink-4);
+      border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center;
+      font-weight: 800; margin-right: 13px; font-size: 0.8rem; border: 1px solid var(--hairline);
+    }
+    .top-rank .rank-badge { background: var(--ink); color: #fff; border-color: transparent; }
+    .brand-name { font-size: 0.95rem; }
+
+    .item-card { border: 1px solid var(--hairline); border-radius: var(--r-lg); overflow: hidden;
+                 background: var(--surface); display: flex; flex-direction: column;
+                 box-shadow: var(--shadow); transition: box-shadow .15s; }
+    .item-card:hover { box-shadow: var(--shadow-up); }
+    .card-img-wrapper { position: relative; padding-top: 52%; background: var(--surface-alt); }
+    .card-img-top { position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                    object-fit: contain; padding: 10px; }
+    .big-rank-badge { position: absolute; top: 0; left: 0; width: 34px; height: 34px;
+                      background: rgba(15,23,42,.88); color: #fff; font-size: 0.92rem; font-weight: 800;
+                      display: flex; align-items: center; justify-content: center;
+                      border-bottom-right-radius: 12px; }
+    .card-body { padding: 13px; flex-grow: 1; display: flex; flex-direction: column; }
+    .category-badge { font-size: 0.7rem; padding: 2px 7px; margin-bottom: 6px; }
+    .card-title { font-size: 0.88rem; margin-bottom: 9px; line-height: 1.4; }
+    .item-stats-display { margin-bottom: 11px; }
+    .price-sub { font-size: 0.78rem; color: var(--ink-3); margin-bottom: 3px; font-weight: 600; }
+    .stat-main-text { font-size: 1rem; font-weight: 800; color: var(--ink);
+                      display: flex; align-items: center; justify-content: space-between; }
+    .stat-unit { font-size: 0.72rem; font-weight: 600; color: var(--ink-4); margin-left: 2px; }
+    .btn-group-custom { gap: 6px; }
+    .btn-custom { padding: 5px 0; font-size: 0.78rem; }
+
+    /* ---------- 일자별 타임라인 ---------- */
+    .timeline-item { display: flex; gap: 13px; margin-bottom: 16px; align-items: stretch; }
+    .time-column { flex: 0 0 72px; display: flex; flex-direction: column; align-items: center; padding-top: 11px; }
+    .time-badge { background: var(--ink); color: #fff; padding: 5px 12px; border-radius: var(--r-sm);
+                  font-weight: 800; font-size: 0.82rem; z-index: 2; letter-spacing: -0.02em; }
+    .time-line-deco { width: 2px; background: var(--hairline); flex-grow: 1;
+                      margin-top: 5px; margin-bottom: -26px; }
+    .timeline-item:last-child .time-line-deco { display: none; }
+    .schedule-card { flex-grow: 1; background: var(--surface); border-radius: var(--r-lg);
+                     overflow: hidden; display: flex; box-shadow: var(--shadow);
+                     border: 1px solid var(--hairline); transition: box-shadow .15s; }
+    .schedule-card:hover { box-shadow: var(--shadow-up); }
+    .sc-thumb-box { width: 120px; min-height: 120px; background: var(--surface-alt);
+                    display: flex; align-items: center; justify-content: center; padding: 10px; }
+    .sc-thumb-img { max-width: 100%; max-height: 104px; object-fit: contain; }
+    .sc-info-box { padding: 16px 18px; flex-grow: 1; display: flex; flex-direction: column;
+                   justify-content: center; }
+
+    /* ---------- 편성표 그리드 (주간 / 3사 통합 공용) ---------- */
+    .schedule-table, .allsched-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+    .schedule-table th, .schedule-table td,
+    .allsched-table th, .allsched-table td {
+      border: 1px solid var(--hairline); padding: 3px; vertical-align: top; font-size: 0.78rem;
+    }
+    .schedule-table th, .allsched-table th {
+      background: var(--surface-alt); text-align: center; font-weight: 800;
+      padding: 9px 6px; color: var(--ink-2); font-size: 0.8rem;
+      border-bottom: 1px solid var(--hairline-2); position: sticky; top: 0; z-index: 5;
+    }
+    .allsched-table th.co-head { color: #fff; border-bottom-color: transparent; }
+    .schedule-table td, .allsched-table td { height: auto; position: relative; }
+    .even-row td { background-color: var(--surface-alt); }
+    .allsched-table tr.even-row td:not(.hour-cell) { background-color: var(--surface-alt); }
+    .schedule-table td:hover, .allsched-table td:hover { background-color: #F1F4F8 !important; }
+    .allsched-table td.hour-cell, .schedule-table td:first-child {
+      text-align: center; font-weight: 800; background: var(--surface-alt);
+      font-size: 0.76rem; color: var(--ink-3); font-variant-numeric: tabular-nums;
+    }
+
+    .pgm-block {
+      display: block; background: var(--surface); border: 1px solid var(--hairline);
+      border-radius: var(--r-sm); padding: 4px 5px; margin-bottom: 2px;
+      transition: border-color .12s, box-shadow .12s; cursor: pointer;
+      text-decoration: none; color: inherit;
+    }
+    .pgm-block:hover { box-shadow: var(--shadow-up); border-color: var(--hairline-2);
+                       z-index: 10; position: relative; }
+    .pgm-row-top { display: flex; align-items: center; justify-content: space-between;
+                   font-size: 0.68rem; margin-bottom: 2px; gap: 3px; }
+    .pgm-time-info { display: flex; align-items: center; gap: 3px; color: var(--ink-2);
+                     font-weight: 800; min-width: 0; }
+    .pgm-badge { font-size: 0.58rem; padding: 1px 4px; border-radius: 3px; font-weight: 800;
+                 line-height: 1.5; white-space: nowrap; letter-spacing: -0.02em; }
+    .pgm-badge-ch { background: var(--surface-alt); color: var(--ink-3); border: 1px solid var(--hairline); }
+    .pgm-badge-md { color: #fff; }
+    .pgm-weight { font-weight: 800; color: var(--ink); font-size: 0.7rem; flex-shrink: 0; }
+    .pgm-row-bottom { font-size: 0.7rem; color: var(--ink-3); line-height: 1.35;
+                      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pgm-brand-text { font-weight: 700; color: var(--ink-2); }
+    .pgm-dimmed { opacity: .22; filter: grayscale(1); }
+    .weekly-table-wrapper { padding: 0; overflow: hidden; }
+
+    /* ---------- 검색 ---------- */
+    .search-stat-box {
+      background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-lg);
+      padding: 16px; display: flex; justify-content: center; gap: 44px; align-items: center;
+      margin-bottom: 16px; box-shadow: var(--shadow);
+    }
+    .search-stat-item { text-align: center; }
+    .search-stat-label { font-size: 0.7rem; color: var(--ink-4); font-weight: 800;
+                         text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+    .search-stat-value { font-size: 1.32rem; font-weight: 800; color: var(--ink); letter-spacing: -0.03em; }
+
+    /* ---------- 기타 ---------- */
+    .chart-container { position: relative; height: 300px; width: 100%; }
+    .spinner-overlay {
+      position: fixed; inset: 0; background: rgba(244,245,247,.94); z-index: 9999;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+    }
+    .fade-in { animation: fade .28s ease; }
+    @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .fade-in { animation: none; }
+      * { transition: none !important; }
+    }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
     @media (max-width: 768px) {
-       .timeline-item { flex-direction: column; gap: 0; }
-       .time-column { flex-direction: row; align-items: center; width: 100%; flex: auto; margin-bottom: 15px; gap: 15px; }
-       .time-line-deco { display: none; }
-       .schedule-card { flex-direction: column; }
-       .sc-thumb-box { width: 100%; height: 180px; }
-       .nav-pills { display: flex; flex-wrap: wrap; }
-       .nav-item { flex: 1 1 50%; }
-       .search-stat-box { flex-direction: column; gap: 15px; }
-       .history-table-container { overflow-x: auto; }
-       .history-table th, .history-table td { min-width: 80px; }
-       .chart-container { height: 250px; }
-       .schedule-table { min-width: 800px; }
-       .weekly-table-wrapper { overflow-x: auto; }
+      .nav-pills { overflow-x: auto; }
+      .header-title { font-size: 1.1rem; }
+      .search-stat-box { gap: 24px; }
+      .sc-thumb-box { width: 92px; min-height: 92px; }
     }
   </style>
 </head>
@@ -200,7 +448,8 @@
     <div class="container">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h3 class="header-title mb-1"><i class="bi bi-bar-chart-line-fill text-info me-2"></i> S사 방송상품 운영현황</h3>
+            <h3 class="header-title mb-1">T커머스 3사 방송상품 운영 현황</h3>
+            <div class="header-sub" id="headerSub">데이터 로딩 중...</div>
         </div>
       </div>
     </div>
@@ -209,37 +458,63 @@
   <div class="container mb-4">
     <div class="nav nav-pills" id="mainTab" role="tablist">
         <div class="nav-item">
-            <button class="nav-link active w-100" id="tab-trend-btn" onclick="switchTab('tab-trend')">
-                <i class="bi bi-graph-up-arrow me-2"></i>Trend 분석
+            <button class="nav-link active w-100" id="tab-overview-btn" onclick="switchTab('tab-overview')">
+                <i class="bi bi-columns-gap me-2"></i>3사 요약
             </button>
         </div>
         <div class="nav-item">
-            <button class="nav-link w-100" id="tab-brand-btn" onclick="switchTab('tab-brand')">
-                <i class="bi bi-grid-fill me-2"></i>브랜드/상품 분석
+            <button class="nav-link w-100" id="tab-allsched-btn" onclick="switchTab('tab-allsched')">
+                <i class="bi bi-calendar3-range me-2"></i>3사 통합 편성표
             </button>
         </div>
         <div class="nav-item">
-            <button class="nav-link w-100" id="tab-search-btn" onclick="switchTab('tab-search')">
-                <i class="bi bi-search me-2"></i>검색 및 다운로드
+            <button class="nav-link w-100" id="tab-detail-btn" onclick="switchTab('tab-detail')">
+                <i class="bi bi-search me-2"></i>회사별 상세분석
             </button>
         </div>
         <div class="nav-item">
-            <button class="nav-link w-100" id="tab-weekly-btn" onclick="switchTab('tab-weekly')">
-                <i class="bi bi-calendar3 me-2"></i>주간 편성표
-            </button>
-        </div>
-        <div class="nav-item">
-            <button class="nav-link w-100" id="tab-daily-btn" onclick="switchTab('tab-daily')">
-                <i class="bi bi-calendar-week-fill me-2"></i>일자별 편성표
+            <button class="nav-link w-100" id="tab-mapping-btn" onclick="switchTab('tab-mapping')">
+                <i class="bi bi-diagram-3-fill me-2"></i>3사 분류표
             </button>
         </div>
     </div>
 
+    <div id="detailNav" style="display:none;">
+      <div class="co-bar" id="companyBar"></div>
+      <div class="nav nav-pills sub-pills" id="subTab" role="tablist">
+        <div class="nav-item">
+            <button class="nav-link active w-100" id="tab-trend-btn" onclick="switchSubTab('tab-trend')">
+                <i class="bi bi-graph-up-arrow me-2"></i>Trend 분석
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link w-100" id="tab-brand-btn" onclick="switchSubTab('tab-brand')">
+                <i class="bi bi-grid-fill me-2"></i>브랜드/상품
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link w-100" id="tab-search-btn" onclick="switchSubTab('tab-search')">
+                <i class="bi bi-search me-2"></i>검색/다운로드
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link w-100" id="tab-weekly-btn" onclick="switchSubTab('tab-weekly')">
+                <i class="bi bi-calendar3 me-2"></i>주간 편성표
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link w-100" id="tab-daily-btn" onclick="switchSubTab('tab-daily')">
+                <i class="bi bi-calendar-week-fill me-2"></i>일자별 편성표
+            </button>
+        </div>
+      </div>
+    </div>
+
     <div id="filterArea">
-        <div class="custom-card" style="background: #fff; border-left: 5px solid #3498db; padding: 15px 20px;">
+        <div class="custom-card" style="padding: 13px 18px;">
           <div class="d-flex align-items-center gap-3">
              <i class="bi bi-info-circle-fill text-primary fs-5"></i>
-             <div class="text-secondary fw-medium" style="font-size: 0.9rem;">가중분은 SK스토아 기준으로 치환하였으며, 브랜드/상품정보 및 분류정보는 S사 홈페이지 정보를 준용하였습니다.</div>
+             <div class="text-secondary fw-medium" style="font-size: 0.9rem;">가중분은 SK스토아 기준으로 산출하였습니다. MD분류는 S사 기준으로 통합이 가능한 점 양해 부탁드립니다.</div>
           </div>
         </div>
 
@@ -268,12 +543,12 @@
 
           <div class="p-3 rounded-3" style="background-color: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.05);">
             <div class="row g-2">
-               <div class="col-md-2"><label class="filter-label small">MD 분류</label><select id="mdClass" class="form-select form-select-sm" onchange="updateCascadingFilters(0)"><option value="ALL">전체</option></select></div>
-               <div class="col-md-2"><label class="filter-label small">대분류</label><select id="itemClass1" class="form-select form-select-sm" onchange="updateCascadingFilters(1)" disabled><option value="ALL">전체</option></select></div>
-               <div class="col-md-2"><label class="filter-label small">중분류</label><select id="itemClass2" class="form-select form-select-sm" onchange="updateCascadingFilters(2)" disabled><option value="ALL">전체</option></select></div>
-               <div class="col-md-2"><label class="filter-label small">소분류</label><select id="itemClass3" class="form-select form-select-sm" onchange="updateCascadingFilters(3)" disabled><option value="ALL">전체</option></select></div>
-               <div class="col-md-2"><label class="filter-label small">세분류</label><select id="itemClass4" class="form-select form-select-sm" onchange="updateCascadingFilters(4)" disabled><option value="ALL">전체</option></select></div>
-               <div class="col-md-2"><label class="filter-label small">세세분류</label><select id="itemClass5" class="form-select form-select-sm" onchange="updateCascadingFilters(5)" disabled><option value="ALL">전체</option></select></div>
+               <div class="col-md-4"><label class="filter-label small">MD 분류</label><select id="mdClass" class="form-select form-select-sm" onchange="onFilterChanged()"><option value="ALL">전체</option></select></div>
+               <div class="col-md-8 d-flex align-items-end">
+                  <span class="text-muted" style="font-size:0.8rem;">
+                     <i class="bi bi-info-circle me-1"></i>세부 카테고리는 3사 체계가 달라 비교가 불가능하여 MD 분류로만 필터링합니다.
+                  </span>
+               </div>
             </div>
           </div>
         </div>
@@ -281,6 +556,85 @@
   </div>
 
   <div class="container">
+
+    <!-- ============ 3사 요약 ============ -->
+    <div id="tab-overview" class="fade-in">
+        <div class="row g-3 mb-4" id="kpiRow"></div>
+
+        <h5 class="section-head">주력 분류 Top 5</h5>
+        <div class="row g-3 mb-4" id="mdTopRow"></div>
+
+        <h5 class="section-head">주력 브랜드 Top 5</h5>
+        <div class="row g-3 mb-4" id="brandRow"></div>
+
+        <div class="custom-card">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+              <h5 class="chart-card-title mb-0" style="border-left-color:#e67e22;">MD 분류별 3사 비중 분포</h5>
+              <div id="shareLegend" class="d-flex gap-3 align-items-center"></div>
+            </div>
+            <div class="text-muted mb-2" style="font-size:0.8rem;">
+              막대 길이 = 같은 분류에 대한 3사의 상대 비중 · 막대 안 숫자 = 각 사 편성 내 비중
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm share-table mb-0" id="shareTable"></table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ 3사 통합 편성표 ============ -->
+    <div id="tab-allsched" class="fade-in" style="display:none;">
+        <div class="custom-card mb-3">
+            <div class="d-flex flex-wrap align-items-end gap-3 justify-content-between">
+                <div class="d-flex gap-3 flex-wrap">
+                    <div>
+                        <label class="filter-label mb-2 d-block">📅 편성 일자</label>
+                        <select id="allSchedDate" class="form-select" style="min-width:200px;" onchange="renderAllSchedule()"></select>
+                    </div>
+                    <div>
+                        <label class="filter-label mb-2 d-block">🔍 MD 분류 하이라이트</label>
+                        <select id="allSchedMd" class="form-select" style="min-width:180px;" onchange="updateAllSchedHighlight()">
+                            <option value="ALL" selected>전체 보기</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <small class="text-muted">* 블록 클릭 시 상품상세로 이동합니다.</small>
+                </div>
+            </div>
+        </div>
+        <div class="custom-card" style="padding:0; overflow:hidden;">
+            <div class="table-responsive">
+                <table class="allsched-table">
+                    <thead><tr id="allSchedHead"></tr></thead>
+                    <tbody id="allSchedBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ 3사 분류표 ============ -->
+    <div id="tab-mapping" class="fade-in" style="display:none;">
+        <div class="custom-card mb-4" style="padding: 13px 18px;">
+          <div class="d-flex align-items-center gap-3">
+            <i class="bi bi-info-circle-fill text-primary fs-5"></i>
+            <div class="text-secondary fw-medium" style="font-size:0.9rem;">
+              3사의 원본 MD분류를 SK스토아 기준 통합 분류로 치환한 표입니다.
+              <span id="mappingStamp" class="text-muted"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="custom-card mb-4">
+          <h5 class="chart-card-title">통합 분류 매핑</h5>
+          <div class="table-responsive">
+            <table class="table table-sm map-table mb-0" id="mappingTable"></table>
+          </div>
+        </div>
+
+        <div id="mappingRules"></div>
+    </div>
+
+    <div id="tab-detail" style="display:none;">
 
     <div id="tab-trend" class="fade-in">
         <div class="row mb-4 g-4">
@@ -337,7 +691,7 @@
     </div>
 
     <div id="tab-weekly" class="fade-in" style="display:none;">
-        <div class="custom-card mb-4" style="background: #fff; padding: 20px;">
+        <div class="custom-card mb-3">
             <div class="d-flex flex-wrap align-items-end gap-3 justify-content-between">
                 <div class="d-flex gap-3 flex-wrap">
                     <div>
@@ -375,7 +729,7 @@
 
     <div id="tab-brand" class="fade-in" style="display:none;">
       <div id="brandView" class="fade-in">
-        <h5 class="mb-3 fw-bold text-dark"><i class="bi bi-trophy-fill text-warning me-2"></i>브랜드별 가중분 순위</h5>
+        <h5 class="section-head">브랜드별 가중분 순위</h5>
         <div id="brandList"></div>
       </div>
       <div id="itemView" class="fade-in" style="display:none;">
@@ -395,7 +749,7 @@
          <button class="btn btn-outline-dark mb-3 rounded-pill px-4 fw-bold btn-sm" onclick="backToItems()">
           <i class="bi bi-arrow-left me-1"></i> 뒤로가기
         </button>
-        <h4 class="fw-bold mb-3 fs-5"><i class="bi bi-clock-history text-primary me-2"></i>방송 이력 상세</h4>
+        <h5 class="section-head">방송 이력 상세</h5>
         <div class="history-product-info rounded-4 mb-4 d-flex gap-4 align-items-center shadow-sm" id="historyInfo"></div>
         <div class="history-table-container">
           <table class="table history-table table-hover mb-0">
@@ -418,7 +772,7 @@
     </div>
 
     <div id="tab-daily" style="display:none;">
-      <div class="custom-card mb-4" style="background: #fff; padding: 20px;">
+      <div class="custom-card mb-3">
         <div class="d-flex flex-wrap align-items-end gap-3">
             <div>
                 <label class="filter-label mb-2 d-block">📅 편성 일자</label>
@@ -466,7 +820,7 @@
                </div>
            </div>
            <div class="d-flex justify-content-between align-items-center mb-3">
-               <h5 class="fw-bold m-0"><i class="bi bi-list-check me-2"></i>검색 결과 리스트</h5>
+               <h5 class="section-head mb-0">검색 결과</h5>
                <button class="btn btn-success btn-sm rounded-pill px-3 fw-bold" onclick="downloadSearchExcel()">
                    <i class="bi bi-file-earmark-excel-fill me-1"></i>엑셀 다운로드
                </button>
@@ -492,44 +846,65 @@
            </div>
        </div>
     </div>
+
+    </div><!-- /#tab-detail -->
   </div>
 
   <script>
-    const GITHUB_BASE_URL = "https://raw.githubusercontent.com/from237/ssg_tv/main/";
-    const START_YEAR = 2022;
-    const END_YEAR = 2026;
+    const GITHUB_BASE_URL = "https://raw.githubusercontent.com/from237/ssg_tv/main/data/";
+    const START_YEAR = 2025;
+    const END_YEAR = new Date().getFullYear();
 
+    // 파일명 규칙: data/{key}_{year}.csv
+    // ★ 표시 순서 고정: SK스토아 → 신세계TV쇼핑 → K쇼핑
+    const COMPANIES = [
+        { key: 'sk',    name: 'SK스토아',     short: 'SK',   color: '#E67E22' },  // 주황
+        { key: 'ssg',   name: '신세계TV쇼핑',  short: '신세계', color: '#2E86DE' },  // 파랑
+        { key: 'kshop', name: 'K쇼핑',        short: 'K쇼핑', color: '#E74C3C' }   // 빨강
+    ];
+    const CO_BY_KEY = {};
+    COMPANIES.forEach(c => CO_BY_KEY[c.key] = c);
+
+    // 통합 MD분류 15종 (md_mapping.py의 UNIFIED_ORDER와 동일)
     const MD_COLOR_MAP = {
-        '패션의류': '#E74C3C', '패션잡화': '#E67E22', '뷰티': '#F1C40F',
-        '주방/생활': '#2ECC71', '식품': '#3498DB', '가전/디지털': '#9B59B6',
-        '건강': '#1ABC9C', '여행/렌탈': '#34495E', '기타': '#95A5A6',
-        '일반식품': '#3498DB', '건강식품': '#1ABC9C', '여성의류': '#E74C3C',
-        '레포츠': '#E67E22', '생활용품': '#2ECC71', '주방용품': '#27ae60',
-        '침구': '#7f8c8d', '가구': '#95a5a6'
+        '의류': '#E74C3C', '언더웨어': '#C0392B', '잡화': '#E67E22', '뷰티': '#F1C40F',
+        '가전': '#9B59B6', '주방': '#16A085', '리빙': '#2ECC71', '레포츠': '#D35400',
+        '건강식품': '#1ABC9C', '일반식품': '#3498DB', '여행': '#2980B9', '보험': '#34495E',
+        '일반렌탈': '#7F8C8D', '대품렌탈': '#95A5A6', '기타합계': '#BDC3C7'
     };
     const DEFAULT_COLOR = '#95A5A6';
+    const NO_IMAGE = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300">' +
+        '<rect width="100%" height="100%" fill="#f1f3f5"/>' +
+        '<text x="50%" y="50%" font-family="sans-serif" font-size="20" fill="#adb5bd" ' +
+        'text-anchor="middle" dominant-baseline="middle">No Image</text></svg>');
 
+    let allData = [];
+    let companyCounts = {};
+    let currentCompany = null;
     let rawData = [];
-    let currentTab = 'trend';
+    let currentTab = 'overview';
+    let currentSubTab = 'trend';
     let historySource = 'trend';
     let currentSearchResults = [];
     let brandTabFilteredData = [];
 
     const chartInstances = {
-        mdShare: null,
-        topBrands: null,
-        topItems: null
+        mdShare: null, topBrands: null, topItems: null
     };
 
     const COL = {
         DATE: 0, TIME: 1, CHANNEL: 2, SIMPLE_MIN: 3, WEIGHT: 4,
         ITEM_CLS1: 5, ITEM_CLS2: 6, ITEM_CLS3: 7, ITEM_CLS4: 8, ITEM_CLS5: 9,
         BRAND: 10, NAME: 11, PRICE: 12, DISC_PRICE: 13, PROMOTION: 14,
-        ITEM_ID: 15, IMAGE: 16, LINK: 17, MD_CLS: 18
+        ITEM_ID: 15, IMAGE: 16, LINK: 17, MD_CLS: 18,
+        COMPANY: 19, MD_RAW: 20, PGMG_NM: 21, MD_NAME: 22, NON_PRODUCT: 23,
+        CO_KEY: 24   // 프론트에서 부여 (파일에는 없음)
     };
 
-    const FILTER_IDS = ['mdClass', 'itemClass1', 'itemClass2', 'itemClass3', 'itemClass4', 'itemClass5'];
-    const FILTER_COLS = [COL.MD_CLS, COL.ITEM_CLS1, COL.ITEM_CLS2, COL.ITEM_CLS3, COL.ITEM_CLS4, COL.ITEM_CLS5];
+    // 세부 카테고리(대/중/소/세/세세)는 3사 체계가 달라 비교 불가 -> MD분류만 사용
+    const FILTER_IDS = ['mdClass'];
+    const FILTER_COLS = [COL.MD_CLS];
 
     Chart.defaults.font.family = "'Pretendard', sans-serif";
     Chart.defaults.color = '#2c3e50';
@@ -550,79 +925,578 @@
     }
 
     async function fetchDataFromGitHub() {
-        const promises = [];
-        for (let year = START_YEAR; year <= END_YEAR; year++) {
-            const url = `${GITHUB_BASE_URL}${year}data.csv`;
-            const p = new Promise((resolve) => {
-                Papa.parse(url, {
-                    download: true,
-                    header: false,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        if(results.data && results.data.length > 0) resolve(results.data.slice(1));
-                        else resolve([]);
-                    },
-                    error: function(err) {
-                        console.warn(`Year ${year} load failed or empty:`, err);
-                        resolve([]);
-                    }
-                });
-            });
-            promises.push(p);
-        }
+        const jobs = [];
+        COMPANIES.forEach(co => {
+            for (let year = START_YEAR; year <= END_YEAR; year++) {
+                jobs.push(new Promise((resolve) => {
+                    Papa.parse(`${GITHUB_BASE_URL}${co.key}_${year}.csv`, {
+                        download: true, header: false, skipEmptyLines: true,
+                        // 파일이 없는 회사×연도 조합은 정상이므로 빈 배열로 넘긴다
+                        complete: (res) => resolve({
+                            key: co.key,
+                            rows: (res.data && res.data.length > 1) ? res.data.slice(1) : []
+                        }),
+                        error: () => resolve({ key: co.key, rows: [] })
+                    });
+                }));
+            }
+        });
 
         try {
-            const results = await Promise.all(promises);
-            rawData = [];
-            results.forEach(yearData => { rawData = rawData.concat(yearData); });
+            const results = await Promise.all(jobs);
 
-            if (rawData.length === 0) throw new Error("로드된 데이터가 없습니다.");
+            allData = [];
+            companyCounts = {};
+            COMPANIES.forEach(co => companyCounts[co.key] = 0);
 
-            console.log(`총 ${rawData.length}건 데이터 로드 완료`);
+            results.forEach(({ key, rows }) => {
+                rows.forEach(r => {
+                    if (!r || r.length < 19) return;
+                    r[COL.CO_KEY] = key;      // 회사 태깅 (파일 내용과 무관하게 보장)
+                    allData.push(r);
+                });
+                companyCounts[key] += rows.length;
+            });
 
-            loadInitialFilter();
+            const loaded = COMPANIES.filter(c => companyCounts[c.key] > 0);
+            if (loaded.length === 0) {
+                throw new Error("data/ 폴더에서 읽어온 데이터가 없습니다. 파일 경로를 확인하세요.");
+            }
+
+            console.log('회사별 로드:', companyCounts);
+            renderCompanyBar();
+
+            // 기간/MD 옵션은 3사 합집합 기준으로 한 번만 구성한다.
+            // (회사를 바꿔도 선택한 기간이 유지되도록)
+            loadInitialFilter(allData);
             updatePeriodOptions();
-            initDailyTab();
-            initWeeklyTab(); // [신규] 주간 편성표 초기화
+            initAllSchedTab();
 
             document.getElementById('loading').style.display = 'none';
-            renderTrendTab();
+            currentCompany = loaded[0].key;
+            rawData = allData.filter(r => r[COL.CO_KEY] === loaded[0].key);
+            initDailyTab();
+            initWeeklyTab();
+            document.querySelector('.co-btn:not(:disabled)').classList.add('active');
+            updateHeaderSub();
+            renderOverview();
 
         } catch (e) {
             handleError(e);
         }
     }
 
+    // ============================================================
+    // 회사 선택 (A안: 한 번에 한 회사)
+    // ============================================================
+    function renderCompanyBar() {
+        const bar = document.getElementById('companyBar');
+        bar.innerHTML = '';
+        COMPANIES.forEach(co => {
+            const cnt = companyCounts[co.key] || 0;
+            const btn = document.createElement('button');
+            btn.className = 'co-btn';
+            btn.id = 'co-' + co.key;
+            btn.style.setProperty('--co-color', co.color);
+            btn.disabled = (cnt === 0);
+            btn.onclick = () => applyCompany(co.key);
+            btn.innerHTML = `<span class="co-dot"></span>
+                <span class="co-name">${co.name}</span>
+                <span class="co-meta">${cnt > 0 ? cnt.toLocaleString() + '건' : '데이터 없음'}</span>`;
+            bar.appendChild(btn);
+        });
+    }
+
+    function applyCompany(key) {
+        currentCompany = key;
+        document.querySelectorAll('.co-btn').forEach(b => b.classList.remove('active'));
+        const btn = document.getElementById('co-' + key);
+        if (btn) btn.classList.add('active');
+
+        rawData = allData.filter(r => r[COL.CO_KEY] === key);
+
+        // 회사별로 달라지는 것만 다시 만든다.
+        // (기간/MD 옵션은 3사 합집합 기준이라 그대로 두어 선택 상태가 유지된다)
+        resetDetailViews();
+        initDailyTab();
+        initWeeklyTab();
+        updateHeaderSub();
+        renderSubTab();
+    }
+
+    function updateHeaderSub() {
+        const co = CO_BY_KEY[currentCompany];
+        let minD = '', maxD = '';
+        allData.forEach(r => {
+            const d = r[COL.DATE];
+            if (!d) return;
+            if (!minD || d < minD) minD = d;
+            if (!maxD || d > maxD) maxD = d;
+        });
+        const total = allData.length.toLocaleString();
+        document.getElementById('headerSub').innerHTML =
+            `3사 통합 ${total}건 · ${minD} ~ ${maxD}` +
+            (currentTab === 'detail' && co ? ` · <b>${co.name}</b> ${rawData.length.toLocaleString()}건` : '');
+    }
+
+    function resetDetailViews() {
+        // 브랜드 탭의 하위 화면과 검색 결과는 회사가 바뀌면 의미가 없어지므로 초기화
+        currentSearchResults = [];
+        brandTabFilteredData = [];
+        ['itemView', 'historyView', 'searchResultArea'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        const bv = document.getElementById('brandView');
+        if (bv) bv.style.display = 'block';
+        const si = document.getElementById('searchInput');
+        if (si) si.value = '';
+    }
+
+    function renderCurrentTab() {
+        if (currentTab === 'overview') renderOverview();
+        else if (currentTab === 'allsched') renderAllSchedule();
+        else if (currentTab === 'mapping') renderMappingTab();
+        else if (currentTab === 'detail') renderSubTab();
+    }
+
     function switchTab(tabId) {
-      document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('#mainTab .nav-link').forEach(el => el.classList.remove('active'));
       document.getElementById(tabId + '-btn').classList.add('active');
 
-      document.getElementById('tab-trend').style.display = 'none';
-      document.getElementById('tab-brand').style.display = 'none';
-      document.getElementById('tab-daily').style.display = 'none';
-      document.getElementById('tab-weekly').style.display = 'none';
-      document.getElementById('tab-search').style.display = 'none';
-
+      ['tab-overview', 'tab-allsched', 'tab-detail', 'tab-mapping'].forEach(id => {
+          document.getElementById(id).style.display = 'none';
+      });
       document.getElementById(tabId).style.display = 'block';
       currentTab = tabId.replace('tab-', '');
 
-      if (currentTab === 'daily' || currentTab === 'weekly') {
-          document.getElementById('filterArea').style.display = 'none';
-      } else {
-          document.getElementById('filterArea').style.display = 'block';
-      }
+      // 회사 선택 바 + 하위 탭은 '회사별 상세'에서만 노출
+      document.getElementById('detailNav').style.display =
+          (currentTab === 'detail') ? 'block' : 'none';
 
-      if (currentTab === 'trend') renderTrendTab();
-      else if (currentTab === 'brand') {
-          const isHistoryMode = document.getElementById('historyView').style.display === 'block';
-          if (isHistoryMode) document.getElementById('filterArea').style.display = 'none';
-          else resetAndRender();
-      } else if (currentTab === 'weekly') {
-          if(document.getElementById('weeklyTbody').innerHTML.trim() === "") renderWeeklySchedule();
+      if (currentTab === 'overview') {
+          document.getElementById('filterArea').style.display = 'block';
+          renderOverview();
+      } else if (currentTab === 'allsched') {
+          document.getElementById('filterArea').style.display = 'none';
+          renderAllSchedule();
+      } else if (currentTab === 'mapping') {
+          document.getElementById('filterArea').style.display = 'none';
+          renderMappingTab();
+      } else {
+          // 하위 탭 표시 상태와 필터 노출은 switchSubTab이 전부 책임진다
+          if (!currentCompany) {
+              const first = COMPANIES.find(c => companyCounts[c.key] > 0);
+              if (first) applyCompany(first.key);
+          }
+          switchSubTab('tab-' + currentSubTab);
       }
     }
 
+    function switchSubTab(tabId) {
+      document.querySelectorAll('#subTab .nav-link').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId + '-btn').classList.add('active');
+
+      ['tab-trend', 'tab-brand', 'tab-daily', 'tab-weekly', 'tab-search'].forEach(id => {
+          document.getElementById(id).style.display = 'none';
+      });
+      document.getElementById(tabId).style.display = 'block';
+      currentSubTab = tabId.replace('tab-', '');
+
+      const isHistory = document.getElementById('historyView').style.display === 'block';
+      const useFilter = ['trend', 'brand', 'search'].includes(currentSubTab)
+                        && !(currentSubTab === 'brand' && isHistory);
+      document.getElementById('filterArea').style.display = useFilter ? 'block' : 'none';
+
+      renderSubTab();
+    }
+
+    function renderSubTab() {
+      if (currentSubTab === 'trend') renderTrendTab();
+      else if (currentSubTab === 'brand') {
+          if (document.getElementById('historyView').style.display !== 'block') resetAndRender();
+      }
+      else if (currentSubTab === 'weekly') renderWeeklySchedule();
+      else if (currentSubTab === 'daily') renderDailySchedule();
+    }
+
     const getNum = (val) => { const n = Number(String(val).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
+
+    // ============================================================
+    // [3사 분류표] md_mapping.json 을 그대로 표로 그린다.
+    // 파이썬 매핑이 단일 원본이라, 규칙이 바뀌면 이 화면도 자동으로 따라온다.
+    // ============================================================
+    let mappingData = null;
+
+    async function renderMappingTab() {
+        const table = document.getElementById('mappingTable');
+        const rulesEl = document.getElementById('mappingRules');
+
+        if (!mappingData) {
+            table.innerHTML = '<tbody><tr><td class="text-muted p-4 text-center">분류표 불러오는 중...</td></tr></tbody>';
+            try {
+                const res = await fetch(GITHUB_BASE_URL.replace(/data\/$/, '') + 'md_mapping.json');
+                if (!res.ok) throw new Error(res.status);
+                mappingData = await res.json();
+            } catch (e) {
+                table.innerHTML = `<tbody><tr><td class="text-muted p-4 text-center">
+                    md_mapping.json 을 불러오지 못했습니다.<br>
+                    <span style="font-size:0.8rem;">run_all.py 를 실행하면 저장소 루트에 생성됩니다.</span>
+                    </td></tr></tbody>`;
+                rulesEl.innerHTML = '';
+                return;
+            }
+        }
+
+        const cos = mappingData['회사'];
+        const stamp = (mappingData['생성일시'] || '').slice(0, 10);
+        document.getElementById('mappingStamp').textContent = stamp ? ` (기준일 ${stamp})` : '';
+
+        let html = '<thead><tr><th style="width:120px;">통합 분류</th>';
+        cos.forEach(c => {
+            const co = CO_BY_KEY[c.key];
+            html += `<th style="color:${co ? co.color : '#495057'}">${c.name}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+
+        mappingData['매핑'].forEach(row => {
+            const u = row.unified;
+            html += `<tr><td class="unified-cell">
+                <span class="trend-md-badge" style="background-color:${MD_COLOR_MAP[u] || DEFAULT_COLOR}">${u}</span></td>`;
+            ['SK', 'SSG', 'KSHOP'].forEach(k => {
+                const list = row.src[k] || [];
+                html += '<td>' + (list.length
+                    ? list.map(v => `<span class="src-tag">${v}</span>`).join('')
+                    : '<span class="src-none">해당 분류 없음</span>') + '</td>';
+            });
+            html += '</tr>';
+        });
+        html += '</tbody>';
+        table.innerHTML = html;
+
+        rulesEl.innerHTML = '<h5 class="section-head">추가 재분류 규칙</h5>' +
+            (mappingData['특수규칙'] || []).map(r => {
+                const detail = r['상세'] || {};
+                const body = Object.keys(detail).map(k => {
+                    const v = detail[k];
+                    const txt = Array.isArray(v) ? v.join(', ') : v;
+                    return `<span class="src-tag">${k} → ${txt}</span>`;
+                }).join('');
+                return `<div class="rule-card">
+                    <div class="rule-title">${r['대상']}</div>
+                    <div class="rule-desc">${r['설명']}</div>
+                    <div>${body}</div>
+                </div>`;
+            }).join('');
+    }
+
+    // ============================================================
+    // 편성 블록 본문 — 회사마다 쓸 수 있는 정보가 달라 표기를 나눈다
+    //   SK스토아 : 편성구분명(편성코드) — 브랜드/카테고리 체계가 없음
+    //   K쇼핑    : 브랜드명만           — 카테고리가 3사 비교 불가
+    //   신세계    : 브랜드 + 세분류       — 현행 유지
+    // ============================================================
+    function pgmBodyHtml(item) {
+        const key = item[COL.CO_KEY];
+        if (key === 'sk') {
+            return `<span class="pgm-brand-text">${item[COL.PGMG_NM] || item[COL.NAME] || '-'}</span>`;
+        }
+        if (key === 'kshop') {
+            return `<span class="pgm-brand-text">[${item[COL.BRAND] || '-'}]</span>`;
+        }
+        const cat = item[COL.ITEM_CLS4] || item[COL.ITEM_CLS3] || '';
+        return `<span class="pgm-brand-text">[${item[COL.BRAND]}]</span> ${cat}`;
+    }
+
+    // ============================================================
+    // [3사 요약] 편성 비중 / 주력 브랜드 비교
+    // ============================================================
+    // MD분류 표시 순서는 항상 SK스토아 가중분 내림차순.
+    // SK에 없는 분류는 3사 합계 기준으로 뒤에 붙인다.
+    let MD_ORDER = [];
+
+    function buildMdOrder(stats) {
+        const sk = (stats && stats['sk']) ? stats['sk'].md : {};
+        const all = {};
+        COMPANIES.forEach(co => {
+            const m = (stats && stats[co.key]) ? stats[co.key].md : {};
+            Object.keys(m).forEach(k => all[k] = (all[k] || 0) + m[k]);
+        });
+        const inSk = Object.keys(sk).filter(k => sk[k] > 0).sort((a, b) => sk[b] - sk[a]);
+        const rest = Object.keys(all).filter(k => !inSk.includes(k)).sort((a, b) => all[b] - all[a]);
+        MD_ORDER = inSk.concat(rest);
+        return MD_ORDER;
+    }
+
+    function globalMdOrder() {
+        if (MD_ORDER.length) return MD_ORDER;
+        const st = {};
+        COMPANIES.forEach(co => st[co.key] = aggregate(allData.filter(r => r[COL.CO_KEY] === co.key)));
+        return buildMdOrder(st);
+    }
+
+    function companySlice(key) {
+        // 요약 화면은 기간 + MD분류(0단계)까지만 적용한다.
+        // 하위 카테고리 필터는 회사마다 체계가 달라 3사 비교에 쓸 수 없다.
+        return getFilteredDataBasedOnDropdowns(
+            allData.filter(r => r[COL.CO_KEY] === key), 1);
+    }
+
+    function aggregate(rows) {
+        const md = {}, brand = {}, brandMd = {}, days = new Set();
+        let weight = 0;
+        rows.forEach(r => {
+            const w = getNum(r[COL.WEIGHT]);
+            weight += w;
+            const m = r[COL.MD_CLS] || '기타합계';
+            md[m] = (md[m] || 0) + w;
+            const b = (r[COL.BRAND] || '').trim();
+            if (b && b !== '(브랜드없음)') {
+                brand[b] = (brand[b] || 0) + w;
+                // 브랜드가 여러 분류에 걸칠 수 있어 가중분이 가장 큰 분류를 대표로 쓴다
+                if (!brandMd[b]) brandMd[b] = {};
+                brandMd[b][m] = (brandMd[b][m] || 0) + w;
+            }
+            if (r[COL.DATE]) days.add(r[COL.DATE]);
+        });
+        return { rows: rows.length, weight, md, brand, brandMd, days: days.size };
+    }
+
+    function mainMdOf(st, brandName) {
+        const m = st.brandMd[brandName];
+        if (!m) return '';
+        return Object.keys(m).sort((a, b) => m[b] - m[a])[0] || '';
+    }
+
+    function renderOverview() {
+        const stats = {};
+        COMPANIES.forEach(co => stats[co.key] = aggregate(companySlice(co.key)));
+
+        buildMdOrder(stats);   // ★ SK스토아 가중분 내림차순으로 표시 순서 확정
+
+        const periodText = document.getElementById('multiSelectAnchor').innerText || '전체';
+        renderKpi(stats, periodText);
+        renderMdTopRow(stats);
+        renderShareTable(stats);
+        renderBrandRow(stats);
+    }
+
+    function renderKpi(stats, periodText) {
+        const row = document.getElementById('kpiRow');
+        row.innerHTML = '';
+        COMPANIES.forEach(co => {
+            const st = stats[co.key];
+            const topMd = Object.keys(st.md).sort((a, b) => st.md[b] - st.md[a])[0];
+            const topShare = topMd && st.weight ? (st.md[topMd] / st.weight * 100).toFixed(1) : '0';
+            const col = document.createElement('div');
+            col.className = 'col-lg-4 col-md-6';
+            col.innerHTML = `
+              <div class="kpi-card" style="--co-color:${co.color}">
+                <div class="kpi-co">${co.name}</div>
+                <div class="kpi-period">${periodText}</div>
+                <div class="kpi-main">${Object.keys(st.brand).length.toLocaleString()}<small>브랜드</small></div>
+                <div class="kpi-grid">
+                  <div class="kpi-sub"><div class="kpi-sub-label">운영 분류</div>
+                       <div class="kpi-sub-val">${Object.keys(st.md).length}개</div></div>
+                  <div class="kpi-sub"><div class="kpi-sub-label">주력 분류</div>
+                       <div class="kpi-sub-val">${topMd || '-'} <span class="text-muted" style="font-size:0.8rem;">${topShare}%</span></div></div>
+                </div>
+              </div>`;
+            row.appendChild(col);
+        });
+    }
+
+    function renderMdTopRow(stats) {
+        const row = document.getElementById('mdTopRow');
+        row.innerHTML = '';
+        COMPANIES.forEach(co => {
+            const st = stats[co.key];
+            const top = Object.keys(st.md).sort((a, b) => st.md[b] - st.md[a]).slice(0, 5);
+            const max = top.length ? st.md[top[0]] : 1;
+            let items = top.map((m, i) => `
+                <div class="brand-rank-item ${i === 0 ? 'is-top' : ''}">
+                  <div class="brand-rank-no">${i + 1}</div>
+                  <div style="flex-grow:1; min-width:0;">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="md-chip" style="background:${MD_COLOR_MAP[m] || DEFAULT_COLOR}">${m}</span>
+                      <span class="brand-rank-val">${(st.md[m] / st.weight * 100).toFixed(1)}%</span>
+                    </div>
+                    <div class="brand-rank-bar" style="width:${(st.md[m] / max * 100).toFixed(0)}%"></div>
+                  </div>
+                  <div class="brand-rank-val">${Math.round(st.md[m]).toLocaleString()}분</div>
+                </div>`).join('');
+            if (!top.length) items = '<div class="text-muted small p-3 text-center">데이터 없음</div>';
+
+            const col = document.createElement('div');
+            col.className = 'col-lg-4 col-md-6';
+            col.innerHTML = `<div class="custom-card h-100" style="--co-color:${co.color}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="fw-bold mb-0" style="color:${co.color}">${co.name}</h6>
+                  <span class="text-muted" style="font-size:0.75rem;">${Object.keys(st.md).length}개 분류 운영</span>
+                </div>${items}</div>`;
+            row.appendChild(col);
+        });
+    }
+
+    function renderShareTable(stats) {
+        // MD_ORDER는 buildMdOrder()가 SK 가중분 내림차순으로 정렬해둔 상태.
+        const labels = MD_ORDER.filter(m => COMPANIES.some(co => (stats[co.key].md[m] || 0) > 0));
+
+        // 범례
+        document.getElementById('shareLegend').innerHTML = COMPANIES.map(co =>
+            `<span style="font-size:0.8rem;font-weight:700;color:#5a6b7c;">
+               <span style="display:inline-block;width:11px;height:11px;border-radius:3px;
+                            background:${co.color};margin-right:5px;vertical-align:-1px;"></span>${co.name}
+             </span>`).join('');
+
+        let html = '<thead><tr><th style="width:110px;">MD 분류</th>'
+                 + '<th>3사 비중 분포</th>'
+                 + '<th style="width:88px;">최다 운영</th></tr></thead><tbody>';
+
+        labels.forEach(m => {
+            // 각 사가 '자기 편성 안에서' 이 분류에 쓰는 비중
+            const own = {};
+            COMPANIES.forEach(co => {
+                const st = stats[co.key];
+                own[co.key] = st.weight ? (st.md[m] || 0) / st.weight * 100 : 0;
+            });
+            // 같은 길이의 막대를 3사 상대 비중으로 나눈다
+            const sum = COMPANIES.reduce((a, co) => a + own[co.key], 0) || 1;
+
+            let best = COMPANIES[0], bestV = -1;
+            COMPANIES.forEach(co => { if (own[co.key] > bestV) { bestV = own[co.key]; best = co; } });
+
+            const segs = COMPANIES.map(co => {
+                const pct = own[co.key] / sum * 100;
+                if (pct <= 0) return '';
+                const label = pct >= 11 ? `${own[co.key].toFixed(1)}%` : '';
+                return `<div class="stack-seg" style="width:${pct.toFixed(2)}%;background:${co.color}"
+                             title="${co.name} · 자사 편성 내 ${own[co.key].toFixed(1)}% (상대 ${pct.toFixed(1)}%)">${label}</div>`;
+            }).join('');
+
+            html += `<tr>
+                <td class="md-cell"><span class="trend-md-badge" style="background-color:${MD_COLOR_MAP[m] || DEFAULT_COLOR}">${m}</span></td>
+                <td><div class="stack-bar">${segs}</div></td>
+                <td><span class="badge" style="background:${best.color}">${best.short}</span></td>
+            </tr>`;
+        });
+        document.getElementById('shareTable').innerHTML = html + '</tbody>';
+    }
+
+    function renderBrandRow(stats) {
+        const row = document.getElementById('brandRow');
+        row.innerHTML = '';
+        COMPANIES.forEach(co => {
+            const st = stats[co.key];
+            const top = Object.keys(st.brand).sort((a, b) => st.brand[b] - st.brand[a]).slice(0, 5);
+            const max = top.length ? st.brand[top[0]] : 1;
+            let items = top.map((b, i) => `
+                <div class="brand-rank-item ${i === 0 ? 'is-top' : ''}">
+                  <div class="brand-rank-no">${i + 1}</div>
+                  <div style="flex-grow:1; min-width:0;">
+                    <div class="d-flex align-items-center gap-2" style="min-width:0;">
+                      <span class="brand-rank-name" title="${b}">${b}</span>
+                      ${(() => { const m = mainMdOf(st, b);
+                          return m ? `<span class="md-chip" style="background:${MD_COLOR_MAP[m] || DEFAULT_COLOR}">${m}</span>` : ''; })()}
+                    </div>
+                    <div class="brand-rank-bar" style="width:${(st.brand[b] / max * 100).toFixed(0)}%"></div>
+                  </div>
+                  <div class="brand-rank-val">${Math.round(st.brand[b]).toLocaleString()}분</div>
+                </div>`).join('');
+            if (!top.length) items = '<div class="text-muted small p-3 text-center">브랜드 정보 없음</div>';
+
+            const col = document.createElement('div');
+            col.className = 'col-lg-4 col-md-6';
+            col.innerHTML = `<div class="custom-card h-100" style="--co-color:${co.color}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="fw-bold mb-0" style="color:${co.color}">${co.name}</h6>
+                  <span class="text-muted" style="font-size:0.75rem;">총 ${Object.keys(st.brand).length.toLocaleString()}개</span>
+                </div>${items}</div>`;
+            row.appendChild(col);
+        });
+    }
+
+    // ============================================================
+    // [3사 통합 편성표]
+    // ============================================================
+    function initAllSchedTab() {
+        const dates = new Set(), mds = new Set();
+        allData.forEach(r => {
+            if (r[COL.DATE]) dates.add(r[COL.DATE]);
+            if (r[COL.MD_CLS]) mds.add(r[COL.MD_CLS]);
+        });
+        const sorted = Array.from(dates).sort().reverse();
+        const sel = document.getElementById('allSchedDate');
+        sel.innerHTML = '';
+        sorted.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d; opt.text = `${d} (${getDayOfWeek(d)})`;
+            const wd = moment(d).day();
+            if (wd === 0) opt.style.color = '#e74c3c'; else if (wd === 6) opt.style.color = '#3498db';
+            sel.appendChild(opt);
+        });
+        const today = moment().format('YYYY-MM-DD');
+        sel.value = sorted.find(d => d <= today) || sorted[0];
+
+        const mdSel = document.getElementById('allSchedMd');
+        mdSel.innerHTML = '<option value="ALL" selected>전체 보기</option>';
+        globalMdOrder().filter(m => mds.has(m)).forEach(m => {
+            const o = document.createElement('option'); o.value = m; o.text = m; mdSel.appendChild(o);
+        });
+    }
+
+    function renderAllSchedule() {
+        const date = document.getElementById('allSchedDate').value;
+        if (!date) return;
+
+        const head = document.getElementById('allSchedHead');
+        head.innerHTML = '<th style="width:52px;">Time</th>' +
+            COMPANIES.map(co =>
+                `<th class="co-head" style="background:${co.color}">${co.name}</th>`).join('');
+
+        const dayRows = allData.filter(r => r[COL.DATE] === date);
+        const tbody = document.getElementById('allSchedBody');
+        tbody.innerHTML = '';
+
+        for (let hour = 0; hour < 24; hour++) {
+            let html = `<tr class="${hour % 2 === 0 ? 'even-row' : ''}">` +
+                       `<td class="hour-cell">${hour}시</td>`;
+            COMPANIES.forEach(co => {
+                const items = dayRows.filter(r => {
+                    if (r[COL.CO_KEY] !== co.key) return false;
+                    const t = r[COL.TIME]; if (!t) return false;
+                    return parseInt(t.trim().split(':')[0], 10) === hour;
+                });
+                html += '<td>' + items.map(it => {
+                    const md = it[COL.MD_CLS] || '';
+                    const color = MD_COLOR_MAP[md] || DEFAULT_COLOR;
+                    const startMin = (it[COL.TIME] || '').split('~')[0].trim().split(':')[1] || '00';
+                    const ch = it[COL.CHANNEL] === 'IPTV' ? 'IP'
+                             : (it[COL.CHANNEL] === 'CATV' ? 'CA' : 'ALL');
+                    const link = it[COL.LINK] || '#';
+                    return `<div class="pgm-block" data-md="${md}" onclick="window.open('${link}','_blank')">
+                        <div class="pgm-row-top">
+                          <div class="pgm-time-info">${startMin}분
+                            <span class="pgm-badge pgm-badge-ch">${ch}</span>
+                            <span class="pgm-badge pgm-badge-md" style="background-color:${color}">${md}</span>
+                          </div>
+                          <span class="pgm-weight">${Math.round(getNum(it[COL.WEIGHT]))}</span>
+                        </div>
+                        <div class="pgm-row-bottom">${pgmBodyHtml(it)}</div></div>`;
+                }).join('') + '</td>';
+            });
+            tbody.insertAdjacentHTML('beforeend', html + '</tr>');
+        }
+        updateAllSchedHighlight();
+    }
+
+    function updateAllSchedHighlight() {
+        const sel = document.getElementById('allSchedMd').value;
+        document.querySelectorAll('#allSchedBody .pgm-block').forEach(b => {
+            if (sel === 'ALL' || b.getAttribute('data-md') === sel) b.classList.remove('pgm-dimmed');
+            else b.classList.add('pgm-dimmed');
+        });
+    }
 
     // ============================================================
     // [Tab Weekly Logic] 주간 편성표 (수정됨)
@@ -656,6 +1530,7 @@
         // 2. MD 분류 셀렉트
         const sortedMds = Array.from(mdSet).sort();
         const mdSel = document.getElementById('weeklyMdHighlight');
+        mdSel.innerHTML = '<option value="ALL" selected>전체 보기</option>';  // 회사 전환 시 중복 방지
         sortedMds.forEach(md => {
             const opt = document.createElement('option');
             opt.value = md;
@@ -716,9 +1591,6 @@
                     const link = item[COL.LINK] || '#';
                     const weight = Math.round(item[COL.WEIGHT]);
 
-                    // 요약: [브랜드] 카테고리(4차) 또는 3차
-                    const catSummary = item[COL.ITEM_CLS4] || item[COL.ITEM_CLS3] || '';
-
                     cellContent += `
                         <div class="pgm-block" data-md="${md}" onclick="window.open('${link}', '_blank')">
                             <div class="pgm-row-top">
@@ -729,9 +1601,7 @@
                                 </div>
                                 <span class="pgm-weight">${weight}</span>
                             </div>
-                            <div class="pgm-row-bottom">
-                                <span class="pgm-brand-text">[${item[COL.BRAND]}]</span> ${catSummary}
-                            </div>
+                            <div class="pgm-row-bottom">${pgmBodyHtml(item)}</div>
                         </div>
                     `;
                 });
@@ -902,12 +1772,13 @@
         return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
     }
 
-    function getFilteredDataBasedOnDropdowns() {
+    function getFilteredDataBasedOnDropdowns(dataset, maxLevel) {
       const type = document.getElementById('periodType').value;
       const selectedPeriods = getSelectedPeriodValues();
-      const filters = FILTER_IDS.map(id => document.getElementById(id).value);
+      const lv = (maxLevel === undefined) ? FILTER_IDS.length : maxLevel;
+      const filters = FILTER_IDS.slice(0, lv).map(id => document.getElementById(id).value);
       if (selectedPeriods.length === 0) return [];
-      return rawData.filter(r => {
+      return (dataset || rawData).filter(r => {
         const d = r[COL.DATE]; if(!d) return false;
         const m = moment(d); if(!m.isValid()) return false;
         let k = '';
@@ -924,37 +1795,18 @@
     }
 
     function onFilterChanged() {
-        if (currentTab === 'trend') renderTrendTab();
-        else if (currentTab === 'brand') resetAndRender();
+        if (currentTab === 'overview') renderOverview();
+        else if (currentTab === 'detail') {
+            if (currentSubTab === 'trend') renderTrendTab();
+            else if (currentSubTab === 'brand') resetAndRender();
+        }
     }
 
-    function loadInitialFilter() {
+    function loadInitialFilter(dataset) {
         const mdCol = FILTER_COLS[0];
         const uniqueValues = new Set();
-        rawData.forEach(r => { if(r[mdCol]) uniqueValues.add(r[mdCol]); });
+        (dataset || rawData).forEach(r => { if(r[mdCol]) uniqueValues.add(r[mdCol]); });
         populateSelect(document.getElementById(FILTER_IDS[0]), Array.from(uniqueValues).sort());
-    }
-
-    function updateCascadingFilters(changedLevel) {
-      for(let i = changedLevel + 1; i < FILTER_IDS.length; i++) {
-        const sel = document.getElementById(FILTER_IDS[i]);
-        sel.innerHTML = '<option value="ALL">전체</option>'; sel.disabled = true;
-      }
-      const currentVal = document.getElementById(FILTER_IDS[changedLevel]).value;
-      if (currentVal === 'ALL') { onFilterChanged(); return; }
-      let validRows = rawData;
-      for(let i=0; i <= changedLevel; i++) {
-        const val = document.getElementById(FILTER_IDS[i]).value;
-        if(val !== 'ALL') validRows = validRows.filter(r => r[FILTER_COLS[i]] === val);
-      }
-      if (changedLevel < FILTER_IDS.length - 1) {
-        const nextLevel = changedLevel + 1; const nextCol = FILTER_COLS[nextLevel]; const nextValues = new Set();
-        validRows.forEach(r => { if(r[nextCol]) nextValues.add(r[nextCol]); });
-        const nextSelect = document.getElementById(FILTER_IDS[nextLevel]);
-        populateSelect(nextSelect, Array.from(nextValues).sort());
-        if(nextValues.size > 0) nextSelect.disabled = false;
-      }
-      onFilterChanged();
     }
 
     function populateSelect(selectEl, list) {
@@ -966,7 +1818,7 @@
       try {
         const type = document.getElementById('periodType').value;
         const periodSet = new Set();
-        rawData.forEach(r => {
+        (allData.length ? allData : rawData).forEach(r => {
           const d = r[COL.DATE]; if(!d) return;
           const m = moment(d); if (!m.isValid()) return;
           let key = '', sortValue = '';
@@ -1084,7 +1936,7 @@
           <div class="col">
             <div class="item-card h-100">
               <div class="card-img-wrapper">
-                <img src="${item.img}" class="card-img-top" onerror="this.src='https://via.placeholder.com/300x300?text=No+Image'">
+                <img src="${item.img || NO_IMAGE}" class="card-img-top" onerror="this.onerror=null;this.src=NO_IMAGE">
                 <div class="big-rank-badge" style="background:${rank<=3?'linear-gradient(135deg, #e74c3c, #c0392b)':'rgba(44, 62, 80, 0.9)'}">${rank}</div>
               </div>
               <div class="card-body">
@@ -1123,7 +1975,7 @@
       if(historyItems.length === 0) return;
       const info = historyItems[0];
       document.getElementById('historyInfo').innerHTML = `
-        <img src="${info[COL.IMAGE]}" class="rounded bg-white shadow-sm" style="width:80px;height:80px;object-fit:contain;border:1px solid #eee; padding:5px;" onerror="this.src='https://via.placeholder.com/100'">
+        <img src="${info[COL.IMAGE] || NO_IMAGE}" class="rounded bg-white shadow-sm" style="width:80px;height:80px;object-fit:contain;border:1px solid #eee; padding:5px;" onerror="this.onerror=null;this.src=NO_IMAGE">
         <div>
            <span class="badge bg-primary bg-opacity-10 text-primary mb-2 category-badge">${info[COL.BRAND]}</span>
            <h5 class="fw-bold m-0 text-dark fs-6">${info[COL.NAME]}</h5>
@@ -1148,10 +2000,11 @@
 
     function backToItems() {
       document.getElementById('historyView').style.display = 'none';
-      if (historySource === 'daily') switchTab('tab-daily');
-      else if (historySource === 'search') switchTab('tab-search');
-      else if (historySource === 'trend') switchTab('tab-trend');
-      else if (historySource === 'weekly') switchTab('tab-weekly');
+      // 방송이력은 여러 하위 탭에서 열리므로 원래 있던 하위 탭으로 되돌린다
+      if (historySource === 'daily') switchSubTab('tab-daily');
+      else if (historySource === 'search') switchSubTab('tab-search');
+      else if (historySource === 'trend') switchSubTab('tab-trend');
+      else if (historySource === 'weekly') switchSubTab('tab-weekly');
       else { document.getElementById('itemView').style.display = 'block'; document.getElementById('filterArea').style.display = 'block'; }
       window.scrollTo(0, 0);
     }
@@ -1209,7 +2062,7 @@
           <div class="timeline-item fade-in">
             <div class="time-column"><div class="time-badge">${time}</div><div class="time-line-deco"></div></div>
             <div class="schedule-card">
-              <div class="sc-thumb-box"><img src="${item[COL.IMAGE]}" class="sc-thumb-img" onerror="this.src='https://via.placeholder.com/150?text=No+Image'"></div>
+              <div class="sc-thumb-box"><img src="${item[COL.IMAGE] || NO_IMAGE}" class="sc-thumb-img" onerror="this.onerror=null;this.src=NO_IMAGE"></div>
               <div class="sc-info-box">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>${chBadge}${mdText} <span class="badge bg-secondary bg-opacity-10 text-secondary category-badge ms-1">${item[COL.BRAND]}</span></div>
