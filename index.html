@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>S사 방송상품 운영요약</title>
+  <title>TV홈쇼핑 3사 편성 비교</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -187,6 +187,27 @@
        .schedule-table { min-width: 800px; }
        .weekly-table-wrapper { overflow-x: auto; }
     }
+    .header-sub { font-size: 0.85rem; opacity: 0.85; font-weight: 500; letter-spacing: 0; }
+
+    /* 회사 선택 세그먼트 */
+    .co-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .co-btn {
+        flex: 1; min-width: 140px; border: 2px solid #e2e8f0; background: #fff;
+        border-radius: var(--radius-md); padding: 12px 16px; cursor: pointer;
+        transition: all 0.18s ease; text-align: left; position: relative;
+        box-shadow: var(--soft-shadow); font-family: inherit;
+    }
+    .co-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--hover-shadow); }
+    .co-btn .co-name { font-weight: 800; font-size: 0.98rem; color: #2c3e50; display: block; }
+    .co-btn .co-meta { font-size: 0.75rem; color: #95a5a6; font-weight: 600; }
+    .co-btn .co-dot {
+        position: absolute; top: 12px; right: 14px; width: 10px; height: 10px;
+        border-radius: 50%; background: #dfe6e9;
+    }
+    .co-btn.active { border-color: var(--co-color); background: linear-gradient(145deg, #ffffff, #f8fbff); }
+    .co-btn.active .co-dot { background: var(--co-color); box-shadow: 0 0 0 4px rgba(0,0,0,0.05); }
+    .co-btn.active .co-name { color: var(--co-color); }
+    .co-btn:disabled { opacity: 0.45; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -200,13 +221,16 @@
     <div class="container">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h3 class="header-title mb-1"><i class="bi bi-bar-chart-line-fill text-info me-2"></i> S사 방송상품 운영현황</h3>
+            <h3 class="header-title mb-1"><i class="bi bi-bar-chart-line-fill text-info me-2"></i> TV홈쇼핑 3사 편성 비교</h3>
+            <div class="header-sub" id="headerSub">데이터 로딩 중...</div>
         </div>
       </div>
     </div>
   </header>
 
   <div class="container mb-4">
+    <div class="co-bar" id="companyBar"></div>
+
     <div class="nav nav-pills" id="mainTab" role="tablist">
         <div class="nav-item">
             <button class="nav-link active w-100" id="tab-trend-btn" onclick="switchTab('tab-trend')">
@@ -239,7 +263,7 @@
         <div class="custom-card" style="background: #fff; border-left: 5px solid #3498db; padding: 15px 20px;">
           <div class="d-flex align-items-center gap-3">
              <i class="bi bi-info-circle-fill text-primary fs-5"></i>
-             <div class="text-secondary fw-medium" style="font-size: 0.9rem;">가중분은 SK스토아 기준으로 치환하였으며, 브랜드/상품정보 및 분류정보는 S사 홈페이지 정보를 준용하였습니다.</div>
+             <div class="text-secondary fw-medium" style="font-size: 0.9rem;">가중분은 3사 모두 SK스토아 실적 곡선(요일×시간)으로 산출했습니다. MD분류는 SK 기준 15종으로 통일했으며, 브랜드/상품정보는 각 사 공개 정보를 준용했습니다.</div>
           </div>
         </div>
 
@@ -495,20 +519,34 @@
   </div>
 
   <script>
-    const GITHUB_BASE_URL = "https://raw.githubusercontent.com/from237/ssg_tv/main/";
-    const START_YEAR = 2022;
-    const END_YEAR = 2026;
+    const GITHUB_BASE_URL = "https://raw.githubusercontent.com/from237/ssg_tv/main/data/";
+    const START_YEAR = 2025;
+    const END_YEAR = new Date().getFullYear();
 
+    // 파일명 규칙: data/{key}_{year}.csv
+    const COMPANIES = [
+        { key: 'ssg',   name: '신세계TV쇼핑', color: '#E74C3C' },
+        { key: 'sk',    name: 'SK스토아',    color: '#E67E22' },
+        { key: 'kshop', name: 'K쇼핑',       color: '#3498DB' }
+    ];
+
+    // 통합 MD분류 15종 (md_mapping.py의 UNIFIED_ORDER와 동일)
     const MD_COLOR_MAP = {
-        '패션의류': '#E74C3C', '패션잡화': '#E67E22', '뷰티': '#F1C40F',
-        '주방/생활': '#2ECC71', '식품': '#3498DB', '가전/디지털': '#9B59B6',
-        '건강': '#1ABC9C', '여행/렌탈': '#34495E', '기타': '#95A5A6',
-        '일반식품': '#3498DB', '건강식품': '#1ABC9C', '여성의류': '#E74C3C',
-        '레포츠': '#E67E22', '생활용품': '#2ECC71', '주방용품': '#27ae60',
-        '침구': '#7f8c8d', '가구': '#95a5a6'
+        '의류': '#E74C3C', '언더웨어': '#C0392B', '잡화': '#E67E22', '뷰티': '#F1C40F',
+        '가전': '#9B59B6', '주방': '#16A085', '리빙': '#2ECC71', '레포츠': '#D35400',
+        '건강식품': '#1ABC9C', '일반식품': '#3498DB', '여행': '#2980B9', '보험': '#34495E',
+        '일반렌탈': '#7F8C8D', '대품렌탈': '#95A5A6', '기타합계': '#BDC3C7'
     };
     const DEFAULT_COLOR = '#95A5A6';
+    const NO_IMAGE = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300">' +
+        '<rect width="100%" height="100%" fill="#f1f3f5"/>' +
+        '<text x="50%" y="50%" font-family="sans-serif" font-size="20" fill="#adb5bd" ' +
+        'text-anchor="middle" dominant-baseline="middle">No Image</text></svg>');
 
+    let allData = [];
+    let companyCounts = {};
+    let currentCompany = null;
     let rawData = [];
     let currentTab = 'trend';
     let historySource = 'trend';
@@ -525,7 +563,9 @@
         DATE: 0, TIME: 1, CHANNEL: 2, SIMPLE_MIN: 3, WEIGHT: 4,
         ITEM_CLS1: 5, ITEM_CLS2: 6, ITEM_CLS3: 7, ITEM_CLS4: 8, ITEM_CLS5: 9,
         BRAND: 10, NAME: 11, PRICE: 12, DISC_PRICE: 13, PROMOTION: 14,
-        ITEM_ID: 15, IMAGE: 16, LINK: 17, MD_CLS: 18
+        ITEM_ID: 15, IMAGE: 16, LINK: 17, MD_CLS: 18,
+        COMPANY: 19, MD_RAW: 20, PGMG_NM: 21, MD_NAME: 22, NON_PRODUCT: 23,
+        CO_KEY: 24   // 프론트에서 부여 (파일에는 없음)
     };
 
     const FILTER_IDS = ['mdClass', 'itemClass1', 'itemClass2', 'itemClass3', 'itemClass4', 'itemClass5'];
@@ -550,47 +590,125 @@
     }
 
     async function fetchDataFromGitHub() {
-        const promises = [];
-        for (let year = START_YEAR; year <= END_YEAR; year++) {
-            const url = `${GITHUB_BASE_URL}${year}data.csv`;
-            const p = new Promise((resolve) => {
-                Papa.parse(url, {
-                    download: true,
-                    header: false,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        if(results.data && results.data.length > 0) resolve(results.data.slice(1));
-                        else resolve([]);
-                    },
-                    error: function(err) {
-                        console.warn(`Year ${year} load failed or empty:`, err);
-                        resolve([]);
-                    }
-                });
-            });
-            promises.push(p);
-        }
+        const jobs = [];
+        COMPANIES.forEach(co => {
+            for (let year = START_YEAR; year <= END_YEAR; year++) {
+                jobs.push(new Promise((resolve) => {
+                    Papa.parse(`${GITHUB_BASE_URL}${co.key}_${year}.csv`, {
+                        download: true, header: false, skipEmptyLines: true,
+                        // 파일이 없는 회사×연도 조합은 정상이므로 빈 배열로 넘긴다
+                        complete: (res) => resolve({
+                            key: co.key,
+                            rows: (res.data && res.data.length > 1) ? res.data.slice(1) : []
+                        }),
+                        error: () => resolve({ key: co.key, rows: [] })
+                    });
+                }));
+            }
+        });
 
         try {
-            const results = await Promise.all(promises);
-            rawData = [];
-            results.forEach(yearData => { rawData = rawData.concat(yearData); });
+            const results = await Promise.all(jobs);
 
-            if (rawData.length === 0) throw new Error("로드된 데이터가 없습니다.");
+            allData = [];
+            companyCounts = {};
+            COMPANIES.forEach(co => companyCounts[co.key] = 0);
 
-            console.log(`총 ${rawData.length}건 데이터 로드 완료`);
+            results.forEach(({ key, rows }) => {
+                rows.forEach(r => {
+                    if (!r || r.length < 19) return;
+                    r[COL.CO_KEY] = key;      // 회사 태깅 (파일 내용과 무관하게 보장)
+                    allData.push(r);
+                });
+                companyCounts[key] += rows.length;
+            });
 
-            loadInitialFilter();
-            updatePeriodOptions();
-            initDailyTab();
-            initWeeklyTab(); // [신규] 주간 편성표 초기화
+            const loaded = COMPANIES.filter(c => companyCounts[c.key] > 0);
+            if (loaded.length === 0) {
+                throw new Error("data/ 폴더에서 읽어온 데이터가 없습니다. 파일 경로를 확인하세요.");
+            }
 
+            console.log('회사별 로드:', companyCounts);
+            renderCompanyBar();
             document.getElementById('loading').style.display = 'none';
-            renderTrendTab();
+            applyCompany(loaded[0].key);
 
         } catch (e) {
             handleError(e);
         }
+    }
+
+    // ============================================================
+    // 회사 선택 (A안: 한 번에 한 회사)
+    // ============================================================
+    function renderCompanyBar() {
+        const bar = document.getElementById('companyBar');
+        bar.innerHTML = '';
+        COMPANIES.forEach(co => {
+            const cnt = companyCounts[co.key] || 0;
+            const btn = document.createElement('button');
+            btn.className = 'co-btn';
+            btn.id = 'co-' + co.key;
+            btn.style.setProperty('--co-color', co.color);
+            btn.disabled = (cnt === 0);
+            btn.onclick = () => applyCompany(co.key);
+            btn.innerHTML = `<span class="co-dot"></span>
+                <span class="co-name">${co.name}</span>
+                <span class="co-meta">${cnt > 0 ? cnt.toLocaleString() + '건' : '데이터 없음'}</span>`;
+            bar.appendChild(btn);
+        });
+    }
+
+    function applyCompany(key) {
+        if (currentCompany === key) return;
+        currentCompany = key;
+        const co = COMPANIES.find(c => c.key === key);
+
+        document.querySelectorAll('.co-btn').forEach(b => b.classList.remove('active'));
+        const btn = document.getElementById('co-' + key);
+        if (btn) btn.classList.add('active');
+
+        rawData = allData.filter(r => r[COL.CO_KEY] === key);
+
+        // 회사가 바뀌면 기간/분류 옵션이 전부 달라지므로 의존 UI를 다시 만든다
+        resetDetailViews();
+        loadInitialFilter();
+        updatePeriodOptions();
+        initDailyTab();
+        initWeeklyTab();
+
+        let minD = '', maxD = '';
+        rawData.forEach(r => {
+            const d = r[COL.DATE];
+            if (!d) return;
+            if (!minD || d < minD) minD = d;
+            if (!maxD || d > maxD) maxD = d;
+        });
+        document.getElementById('headerSub').innerHTML =
+            `${co.name} · ${rawData.length.toLocaleString()}건 · ${minD} ~ ${maxD}`;
+
+        renderCurrentTab();
+    }
+
+    function resetDetailViews() {
+        // 브랜드 탭의 하위 화면과 검색 결과는 회사가 바뀌면 의미가 없어지므로 초기화
+        currentSearchResults = [];
+        brandTabFilteredData = [];
+        ['itemView', 'historyView', 'searchResultArea'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        const bv = document.getElementById('brandView');
+        if (bv) bv.style.display = 'block';
+        const si = document.getElementById('searchInput');
+        if (si) si.value = '';
+    }
+
+    function renderCurrentTab() {
+        if (currentTab === 'trend') renderTrendTab();
+        else if (currentTab === 'brand') resetAndRender();
+        else if (currentTab === 'weekly') renderWeeklySchedule();
+        else if (currentTab === 'daily') renderDailySchedule();
     }
 
     function switchTab(tabId) {
@@ -656,6 +774,7 @@
         // 2. MD 분류 셀렉트
         const sortedMds = Array.from(mdSet).sort();
         const mdSel = document.getElementById('weeklyMdHighlight');
+        mdSel.innerHTML = '<option value="ALL" selected>전체 보기</option>';  // 회사 전환 시 중복 방지
         sortedMds.forEach(md => {
             const opt = document.createElement('option');
             opt.value = md;
@@ -1084,7 +1203,7 @@
           <div class="col">
             <div class="item-card h-100">
               <div class="card-img-wrapper">
-                <img src="${item.img}" class="card-img-top" onerror="this.src='https://via.placeholder.com/300x300?text=No+Image'">
+                <img src="${item.img || NO_IMAGE}" class="card-img-top" onerror="this.onerror=null;this.src=NO_IMAGE">
                 <div class="big-rank-badge" style="background:${rank<=3?'linear-gradient(135deg, #e74c3c, #c0392b)':'rgba(44, 62, 80, 0.9)'}">${rank}</div>
               </div>
               <div class="card-body">
@@ -1123,7 +1242,7 @@
       if(historyItems.length === 0) return;
       const info = historyItems[0];
       document.getElementById('historyInfo').innerHTML = `
-        <img src="${info[COL.IMAGE]}" class="rounded bg-white shadow-sm" style="width:80px;height:80px;object-fit:contain;border:1px solid #eee; padding:5px;" onerror="this.src='https://via.placeholder.com/100'">
+        <img src="${info[COL.IMAGE] || NO_IMAGE}" class="rounded bg-white shadow-sm" style="width:80px;height:80px;object-fit:contain;border:1px solid #eee; padding:5px;" onerror="this.onerror=null;this.src=NO_IMAGE">
         <div>
            <span class="badge bg-primary bg-opacity-10 text-primary mb-2 category-badge">${info[COL.BRAND]}</span>
            <h5 class="fw-bold m-0 text-dark fs-6">${info[COL.NAME]}</h5>
@@ -1209,7 +1328,7 @@
           <div class="timeline-item fade-in">
             <div class="time-column"><div class="time-badge">${time}</div><div class="time-line-deco"></div></div>
             <div class="schedule-card">
-              <div class="sc-thumb-box"><img src="${item[COL.IMAGE]}" class="sc-thumb-img" onerror="this.src='https://via.placeholder.com/150?text=No+Image'"></div>
+              <div class="sc-thumb-box"><img src="${item[COL.IMAGE] || NO_IMAGE}" class="sc-thumb-img" onerror="this.onerror=null;this.src=NO_IMAGE"></div>
               <div class="sc-info-box">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>${chBadge}${mdText} <span class="badge bg-secondary bg-opacity-10 text-secondary category-badge ms-1">${item[COL.BRAND]}</span></div>
