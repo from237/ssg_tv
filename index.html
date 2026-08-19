@@ -80,44 +80,25 @@
       font-variant-numeric: tabular-nums; font-feature-settings: "tnum";
     }
     /* 시계·코드·계기판 — 모노 */
-    .header-sub, .onair-labels, .time-badge, .hour-cell, .pgm-time-info, .pgm-weight,
-    .search-stat-value, .kpi-main, .header-eyebrow,
+    .time-badge, .hour-cell, .pgm-time-info, .pgm-weight,
+    .search-stat-value, .kpi-main,
     .schedule-table td:first-child { font-family: var(--font-mono); letter-spacing: 0; }
 
     /* ---------- 헤더: 관제실 ---------- */
     .dashboard-header {
       background: var(--studio);
       color: #fff;
-      padding-top: 30px;
+      padding-top: 34px;
       margin-bottom: 24px;
       position: relative;
     }
-    .header-eyebrow {
-      font-size: 0.66rem; font-weight: 500; color: #8B96AD;
-      letter-spacing: 0.22em; margin-bottom: 8px;
-    }
     .header-title {
       font-size: 1.42rem; font-weight: 800; letter-spacing: -0.035em;
-      margin: 0 0 6px; color: #F7F8FA;
+      margin: 0; color: #F7F8FA;
     }
-    .header-sub { font-size: 0.74rem; color: #7E89A3; font-weight: 400; }
-    .header-sub b { color: #D4DAE5; font-weight: 600; }
 
-    /* 시그니처 — 24시간 데이 룰러 + 3사 레인 */
-    .onair { margin-top: 18px; }
-    .onair-labels {
-      display: flex; justify-content: space-between;
-      font-size: 0.6rem; color: #5B6680; margin-bottom: 3px; user-select: none;
-    }
-    .onair-ticks {
-      height: 7px;
-      background:
-        repeating-linear-gradient(to right,
-          rgba(255,255,255,.30) 0 1px, transparent 1px calc(100% / 24));
-      background-position: bottom;
-      border-bottom: 1px solid rgba(255,255,255,.14);
-    }
-    .onair-lane { display: flex; height: 3px; }
+    /* 시그니처 — 3사 레인 */
+    .onair-lane { display: flex; height: 3px; margin-top: 22px; }
     .onair-lane i { flex: 1; transform-origin: left; }
     .onair-lane .l-sk  { background: var(--co-sk); }
     .onair-lane .l-ssg { background: var(--co-ssg); }
@@ -332,13 +313,6 @@
       border-radius: 5px; color: var(--ink-2); font-size: 0.76rem; font-weight: 600;
     }
     .src-none { color: var(--ink-4); font-size: 0.78rem; }
-    .rule-card {
-      background: var(--surface); border: 1px solid var(--hairline);
-      border-left: 3px solid var(--ink-2); border-radius: var(--r-lg);
-      box-shadow: var(--shadow); padding: 16px 20px; margin-bottom: 12px;
-    }
-    .rule-title { font-weight: 800; font-size: 0.89rem; color: var(--ink); margin-bottom: 2px; }
-    .rule-desc { font-size: 0.8rem; color: var(--ink-3); margin-bottom: 10px; }
 
     .trend-table th { padding: 10px 4px; text-align: center; }
     .trend-table td { padding: 7px 4px; font-size: 0.83rem; vertical-align: middle; }
@@ -525,17 +499,9 @@
 
   <header class="dashboard-header">
     <div class="container">
-      <div class="header-eyebrow">T-COMMERCE&nbsp;&nbsp;·&nbsp;&nbsp;DAILY 1,440 MIN</div>
       <h1 class="header-title">T커머스 3사 방송상품 운영 현황</h1>
-      <div class="header-sub" id="headerSub">데이터 로딩 중...</div>
     </div>
-    <div class="onair" aria-hidden="true">
-      <div class="container">
-        <div class="onair-labels"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
-        <div class="onair-ticks"></div>
-      </div>
-      <div class="onair-lane"><i class="l-sk"></i><i class="l-ssg"></i><i class="l-k"></i></div>
-    </div>
+    <div class="onair-lane" aria-hidden="true"><i class="l-sk"></i><i class="l-ssg"></i><i class="l-k"></i></div>
   </header>
 
   <div class="container mb-4">
@@ -543,11 +509,6 @@
         <div class="nav-item">
             <button class="nav-link active w-100" id="tab-overview-btn" onclick="switchTab('tab-overview')">
                 <i class="bi bi-columns-gap me-2"></i>3사 요약
-            </button>
-        </div>
-        <div class="nav-item">
-            <button class="nav-link w-100" id="tab-allsched-btn" onclick="switchTab('tab-allsched')">
-                <i class="bi bi-calendar3-range me-2"></i>3사 통합 편성표
             </button>
         </div>
         <div class="nav-item">
@@ -597,7 +558,7 @@
         <div class="custom-card" style="padding: 13px 18px;">
           <div class="d-flex align-items-center gap-3">
              <i class="bi bi-info-circle-fill text-primary fs-5"></i>
-             <div class="text-secondary fw-medium" style="font-size: 0.9rem;">가중분은 SK스토아 기준으로 산출하였습니다. MD분류는 S사 기준으로 통합이 가능한 점 양해 부탁드립니다.</div>
+             <div class="text-secondary fw-medium" style="font-size: 0.9rem;">가중분은 SK스토아 기준으로 산출하였습니다.</div>
           </div>
         </div>
 
@@ -629,7 +590,7 @@
                <div class="col-md-4"><label class="filter-label small">MD 분류</label><select id="mdClass" class="form-select form-select-sm" onchange="onFilterChanged()"><option value="ALL">전체</option></select></div>
                <div class="col-md-8 d-flex align-items-end">
                   <span class="text-muted" style="font-size:0.8rem;">
-                     <i class="bi bi-info-circle me-1"></i>세부 카테고리는 3사 체계가 달라 비교가 불가능하여 MD 분류로만 필터링합니다.
+                     <i class="bi bi-info-circle me-1"></i>SK스토아와 신세계는 노출된 상품분류 기준에 따라 MD분류를 판정하고, K쇼핑은 노출된 정보가 없어 상품명을 통해 MD분류를 추론합니다.
                   </span>
                </div>
             </div>
@@ -664,37 +625,6 @@
         </div>
     </div>
 
-    <!-- ============ 3사 통합 편성표 ============ -->
-    <div id="tab-allsched" class="fade-in" style="display:none;">
-        <div class="custom-card mb-3">
-            <div class="d-flex flex-wrap align-items-end gap-3 justify-content-between">
-                <div class="d-flex gap-3 flex-wrap">
-                    <div>
-                        <label class="filter-label mb-2 d-block">📅 편성 일자</label>
-                        <select id="allSchedDate" class="form-select" style="min-width:200px;" onchange="renderAllSchedule()"></select>
-                    </div>
-                    <div>
-                        <label class="filter-label mb-2 d-block">🔍 MD 분류 하이라이트</label>
-                        <select id="allSchedMd" class="form-select" style="min-width:180px;" onchange="updateAllSchedHighlight()">
-                            <option value="ALL" selected>전체 보기</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="text-end">
-                    <small class="text-muted">* 블록 클릭 시 상품상세로 이동합니다.</small>
-                </div>
-            </div>
-        </div>
-        <div class="custom-card" style="padding:0; overflow:hidden;">
-            <div class="table-responsive">
-                <table class="allsched-table">
-                    <thead><tr id="allSchedHead"></tr></thead>
-                    <tbody id="allSchedBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <!-- ============ 3사 분류표 ============ -->
     <div id="tab-mapping" class="fade-in" style="display:none;">
         <div class="custom-card mb-4" style="padding: 13px 18px;">
@@ -714,7 +644,6 @@
           </div>
         </div>
 
-        <div id="mappingRules"></div>
     </div>
 
     <div id="tab-detail" style="display:none;">
@@ -1059,7 +988,6 @@
             // (회사를 바꿔도 선택한 기간이 유지되도록)
             loadInitialFilter(allData);
             updatePeriodOptions();
-            initAllSchedTab();
 
             document.getElementById('loading').style.display = 'none';
             currentCompany = loaded[0].key;
@@ -1114,18 +1042,8 @@
     }
 
     function updateHeaderSub() {
-        const co = CO_BY_KEY[currentCompany];
-        let minD = '', maxD = '';
-        allData.forEach(r => {
-            const d = r[COL.DATE];
-            if (!d) return;
-            if (!minD || d < minD) minD = d;
-            if (!maxD || d > maxD) maxD = d;
-        });
-        const total = allData.length.toLocaleString();
-        document.getElementById('headerSub').innerHTML =
-            `3사 통합 ${total}건 · ${minD} ~ ${maxD}` +
-            (currentTab === 'detail' && co ? ` · <b>${co.name}</b> ${rawData.length.toLocaleString()}건` : '');
+        // 헤더에 건수를 표기하지 않기로 해서 남길 내용이 없다.
+        // 호출부(로드 완료 / 회사 전환)는 그대로 두고 여기서만 비워둔다.
     }
 
     function resetDetailViews() {
@@ -1144,7 +1062,6 @@
 
     function renderCurrentTab() {
         if (currentTab === 'overview') renderOverview();
-        else if (currentTab === 'allsched') renderAllSchedule();
         else if (currentTab === 'mapping') renderMappingTab();
         else if (currentTab === 'detail') renderSubTab();
     }
@@ -1153,7 +1070,7 @@
       document.querySelectorAll('#mainTab .nav-link').forEach(el => el.classList.remove('active'));
       document.getElementById(tabId + '-btn').classList.add('active');
 
-      ['tab-overview', 'tab-allsched', 'tab-detail', 'tab-mapping'].forEach(id => {
+      ['tab-overview', 'tab-detail', 'tab-mapping'].forEach(id => {
           document.getElementById(id).style.display = 'none';
       });
       document.getElementById(tabId).style.display = 'block';
@@ -1166,9 +1083,6 @@
       if (currentTab === 'overview') {
           document.getElementById('filterArea').style.display = 'block';
           renderOverview();
-      } else if (currentTab === 'allsched') {
-          document.getElementById('filterArea').style.display = 'none';
-          renderAllSchedule();
       } else if (currentTab === 'mapping') {
           document.getElementById('filterArea').style.display = 'none';
           renderMappingTab();
@@ -1219,7 +1133,6 @@
 
     async function renderMappingTab() {
         const table = document.getElementById('mappingTable');
-        const rulesEl = document.getElementById('mappingRules');
 
         if (!mappingData) {
             table.innerHTML = '<tbody><tr><td class="text-muted p-4 text-center">분류표 불러오는 중...</td></tr></tbody>';
@@ -1232,7 +1145,6 @@
                     md_mapping.json 을 불러오지 못했습니다.<br>
                     <span style="font-size:0.8rem;">run_all.py 를 실행하면 저장소 루트에 생성됩니다.</span>
                     </td></tr></tbody>`;
-                rulesEl.innerHTML = '';
                 return;
             }
         }
@@ -1263,26 +1175,13 @@
         html += '</tbody>';
         table.innerHTML = html;
 
-        rulesEl.innerHTML = '<h5 class="section-head">추가 재분류 규칙</h5>' +
-            (mappingData['특수규칙'] || []).map(r => {
-                const detail = r['상세'] || {};
-                const body = Object.keys(detail).map(k => {
-                    const v = detail[k];
-                    const txt = Array.isArray(v) ? v.join(', ') : v;
-                    return `<span class="src-tag">${k} → ${txt}</span>`;
-                }).join('');
-                return `<div class="rule-card">
-                    <div class="rule-title">${r['대상']}</div>
-                    <div class="rule-desc">${r['설명']}</div>
-                    <div>${body}</div>
-                </div>`;
-            }).join('');
+        // 재분류 규칙은 화면에 노출하지 않는다 (내부 판정 로직이라 혼선만 준다)
     }
 
     // ============================================================
     // 편성 블록 본문 — 회사마다 쓸 수 있는 정보가 달라 표기를 나눈다
     //   SK스토아 : 편성구분명(편성코드) — 브랜드/카테고리 체계가 없음
-    //   K쇼핑    : 브랜드명만           — 카테고리가 3사 비교 불가
+    //   K쇼핑    : 브랜드 + 추정 아이템분류(41K 학습) — 원본 카테고리는 비교 불가
     //   신세계    : 브랜드 + 세분류       — 현행 유지
     // ============================================================
     function pgmBodyHtml(item) {
@@ -1291,7 +1190,10 @@
             return `<span class="pgm-brand-text">${item[COL.PGMG_NM] || item[COL.NAME] || '-'}</span>`;
         }
         if (key === 'kshop') {
-            return `<span class="pgm-brand-text">[${item[COL.BRAND] || '-'}]</span>`;
+            // 아이템분류4 = SK 41K 마스터 학습으로 추정한 아이템분류 (없으면 브랜드만)
+            const inferred = item[COL.ITEM_CLS4] || '';
+            return `<span class="pgm-brand-text">[${item[COL.BRAND] || '-'}]</span>` +
+                   (inferred ? ` ${inferred}` : '');
         }
         const cat = item[COL.ITEM_CLS4] || item[COL.ITEM_CLS3] || '';
         return `<span class="pgm-brand-text">[${item[COL.BRAND]}]</span> ${cat}`;
@@ -1502,88 +1404,6 @@
                   <span class="text-muted" style="font-size:0.75rem;">총 ${Object.keys(st.brand).length.toLocaleString()}개</span>
                 </div>${items}</div>`;
             row.appendChild(col);
-        });
-    }
-
-    // ============================================================
-    // [3사 통합 편성표]
-    // ============================================================
-    function initAllSchedTab() {
-        const dates = new Set(), mds = new Set();
-        allData.forEach(r => {
-            if (r[COL.DATE]) dates.add(r[COL.DATE]);
-            if (r[COL.MD_CLS]) mds.add(r[COL.MD_CLS]);
-        });
-        const sorted = Array.from(dates).sort().reverse();
-        const sel = document.getElementById('allSchedDate');
-        sel.innerHTML = '';
-        sorted.forEach(d => {
-            const opt = document.createElement('option');
-            opt.value = d; opt.text = `${d} (${getDayOfWeek(d)})`;
-            const wd = moment(d).day();
-            if (wd === 0) opt.style.color = '#e74c3c'; else if (wd === 6) opt.style.color = '#3498db';
-            sel.appendChild(opt);
-        });
-        const today = moment().format('YYYY-MM-DD');
-        sel.value = sorted.find(d => d <= today) || sorted[0];
-
-        const mdSel = document.getElementById('allSchedMd');
-        mdSel.innerHTML = '<option value="ALL" selected>전체 보기</option>';
-        globalMdOrder().filter(m => mds.has(m)).forEach(m => {
-            const o = document.createElement('option'); o.value = m; o.text = m; mdSel.appendChild(o);
-        });
-    }
-
-    function renderAllSchedule() {
-        const date = document.getElementById('allSchedDate').value;
-        if (!date) return;
-
-        const head = document.getElementById('allSchedHead');
-        head.innerHTML = '<th style="width:52px;">Time</th>' +
-            COMPANIES.map(co =>
-                `<th class="co-head" style="background:${co.color}">${co.name}</th>`).join('');
-
-        const dayRows = allData.filter(r => r[COL.DATE] === date);
-        const tbody = document.getElementById('allSchedBody');
-        tbody.innerHTML = '';
-
-        for (let hour = 0; hour < 24; hour++) {
-            let html = `<tr class="${hour % 2 === 0 ? 'even-row' : ''}">` +
-                       `<td class="hour-cell">${hour}시</td>`;
-            COMPANIES.forEach(co => {
-                const items = dayRows.filter(r => {
-                    if (r[COL.CO_KEY] !== co.key) return false;
-                    const t = r[COL.TIME]; if (!t) return false;
-                    return parseInt(t.trim().split(':')[0], 10) === hour;
-                });
-                html += '<td>' + items.map(it => {
-                    const md = it[COL.MD_CLS] || '';
-                    const color = MD_COLOR_MAP[md] || DEFAULT_COLOR;
-                    const startMin = (it[COL.TIME] || '').split('~')[0].trim().split(':')[1] || '00';
-                    const ch = it[COL.CHANNEL] === 'IPTV' ? 'IP'
-                             : (it[COL.CHANNEL] === 'CATV' ? 'CA' : 'ALL');
-                    const link = it[COL.LINK] || '#';
-                    return `<div class="pgm-block" data-md="${md}" onclick="window.open('${link}','_blank')">
-                        <div class="pgm-row-top">
-                          <div class="pgm-time-info">${startMin}분
-                            <span class="pgm-badge pgm-badge-ch">${ch}</span>
-                            <span class="pgm-badge pgm-badge-md" style="background-color:${color}">${md}</span>
-                          </div>
-                          <span class="pgm-weight">${Math.round(getNum(it[COL.WEIGHT]))}</span>
-                        </div>
-                        <div class="pgm-row-bottom">${pgmBodyHtml(it)}</div></div>`;
-                }).join('') + '</td>';
-            });
-            tbody.insertAdjacentHTML('beforeend', html + '</tr>');
-        }
-        updateAllSchedHighlight();
-    }
-
-    function updateAllSchedHighlight() {
-        const sel = document.getElementById('allSchedMd').value;
-        document.querySelectorAll('#allSchedBody .pgm-block').forEach(b => {
-            if (sel === 'ALL' || b.getAttribute('data-md') === sel) b.classList.remove('pgm-dimmed');
-            else b.classList.add('pgm-dimmed');
         });
     }
 
